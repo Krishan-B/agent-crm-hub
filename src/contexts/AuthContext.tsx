@@ -44,7 +44,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      setProfile(data);
+      // Type assertion to ensure compatibility with our UserProfile interface
+      const typedProfile: UserProfile = {
+        ...data,
+        role: data.role as 'admin' | 'agent',
+        status: data.status as 'active' | 'inactive'
+      };
+
+      setProfile(typedProfile);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }

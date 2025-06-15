@@ -40,7 +40,14 @@ const UserManagement: React.FC = () => {
         return;
       }
 
-      setUsers(data || []);
+      // Type assertion to ensure compatibility with our UserProfile interface
+      const typedUsers: UserProfile[] = (data || []).map(user => ({
+        ...user,
+        role: user.role as 'admin' | 'agent',
+        status: user.status as 'active' | 'inactive'
+      }));
+
+      setUsers(typedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
