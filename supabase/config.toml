@@ -1,1 +1,14 @@
+
 project_id = "zknyyltinlagwkbbedrx"
+
+[functions.ai-lead-scoring]
+verify_jwt = true
+
+[functions.analytics-report]
+verify_jwt = true
+
+[functions.lead-auto-assign]
+verify_jwt = true
+
+[functions.batch-operations]
+verify_jwt = true

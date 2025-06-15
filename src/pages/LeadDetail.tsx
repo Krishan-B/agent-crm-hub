@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
@@ -11,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Phone, Bell, Check, X, Calendar, Loader2 } from 'lucide-react';
 import { useLeadDetail } from '../hooks/useLeadDetail';
 import { useToast } from '@/hooks/use-toast';
+import LeadScoring from '../components/LeadScoring';
 
 const LeadDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -143,7 +143,7 @@ const LeadDetail: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
             <Tabs defaultValue="overview" className="space-y-4">
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -301,9 +301,19 @@ const LeadDetail: React.FC = () => {
                 </Card>
               </TabsContent>
             </Tabs>
+
+            {/* Add AI Lead Scoring */}
+            <LeadScoring 
+              leadId={leadId} 
+              onScoreGenerated={(score) => {
+                console.log('Lead score generated:', score);
+                // Optionally refresh lead data
+                fetchLeadDetail();
+              }}
+            />
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Account Summary</CardTitle>
