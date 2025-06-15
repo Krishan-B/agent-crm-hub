@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import AddUserDialog from '../components/AddUserDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Phone, Plus } from 'lucide-react';
+import { User, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -81,10 +82,9 @@ const UserManagement: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
             <p className="text-gray-600">Manage system users and permissions</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+          {profile?.role === 'admin' && (
+            <AddUserDialog onUserAdded={fetchUsers} />
+          )}
         </div>
 
         <Card>
