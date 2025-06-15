@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
@@ -24,6 +25,7 @@ const LeadDetail: React.FC = () => {
     kycDocuments, 
     isLoading, 
     error, 
+    fetchLeadDetail,
     addActivity, 
     addTransaction 
   } = useLeadDetail(id || '');
@@ -304,7 +306,7 @@ const LeadDetail: React.FC = () => {
 
             {/* Add AI Lead Scoring */}
             <LeadScoring 
-              leadId={leadId} 
+              leadId={id || ''} 
               onScoreGenerated={(score) => {
                 console.log('Lead score generated:', score);
                 // Optionally refresh lead data
