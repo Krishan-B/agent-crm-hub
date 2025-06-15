@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as LabelPrimitive from "@radix-ui/react-label"
 import { Slot } from "@radix-ui/react-slot"
@@ -9,6 +10,7 @@ import {
   FormProvider,
   useFormContext,
 } from "react-hook-form"
+import DOMPurify from 'dompurify';
 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
@@ -151,6 +153,8 @@ const FormMessage = React.forwardRef<
     return null
   }
 
+  const sanitizedMessage = DOMPurify.sanitize(body, { USE_PROFILES: { html: false } });
+
   return (
     <p
       ref={ref}
@@ -158,7 +162,7 @@ const FormMessage = React.forwardRef<
       className={cn("text-sm font-medium text-destructive", className)}
       {...props}
     >
-      {body}
+      {sanitizedMessage}
     </p>
   )
 })

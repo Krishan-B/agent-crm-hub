@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { sanitizeInput } from '@/lib/sanitize';
 
 interface AddUserDialogProps {
   onUserAdded: () => void;
@@ -29,13 +30,18 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ onUserAdded }) => {
     setError('');
     setIsLoading(true);
 
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
+    const sanitizedFirstName = sanitizeInput(firstName);
+    const sanitizedLastName = sanitizeInput(lastName);
+    const sanitizedEmail = sanitizeInput(email);
+    const sanitizedPassword = sanitizeInput(password);
+
+    if (!sanitizedFirstName.trim() || !sanitizedLastName.trim() || !sanitizedEmail.trim() || !sanitizedPassword.trim()) {
       setError('All fields are required');
       setIsLoading(false);
       return;
     }
 
-    const result = await signUp(email, password, firstName, lastName, role);
+    const result = await signUp(sanitizedEmail, sanitizedPassword, sanitizedFirstName, sanitizedLastName, role);
     
     if (result.error) {
       setError(result.error);

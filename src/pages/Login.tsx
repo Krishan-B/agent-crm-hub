@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { sanitizeInput } from '@/lib/sanitize';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -22,7 +23,10 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
     
-    const result = await login(email, password);
+    const sanitizedEmail = sanitizeInput(email);
+    const sanitizedPassword = sanitizeInput(password);
+
+    const result = await login(sanitizedEmail, sanitizedPassword);
     if (result.error) {
       setError(result.error);
     }
