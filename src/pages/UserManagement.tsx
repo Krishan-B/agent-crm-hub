@@ -1,47 +1,52 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Phone, Bell } from 'lucide-react';
+import { User, Phone, Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '../contexts/AuthContext';
+
+interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  role: 'admin' | 'agent';
+  department?: string;
+  status: 'active' | 'inactive';
+  created_at: string;
+}
 
 const UserManagement: React.FC = () => {
-  const users = [
-    {
-      id: 1,
-      firstName: 'John',
-      lastName: 'Admin',
-      email: 'john@crm.com',
-      phone: '+1-555-0100',
-      role: 'admin',
-      department: 'Management',
-      status: 'active',
-      lastLogin: '2024-01-16 9:30 AM'
-    },
-    {
-      id: 2,
-      firstName: 'Jane',
-      lastName: 'Agent',
-      email: 'jane@crm.com',
-      phone: '+1-555-0101',
-      role: 'agent',
-      department: 'Sales',
-      status: 'active',
-      lastLogin: '2024-01-16 8:45 AM'
-    },
-    {
-      id: 3,
-      firstName: 'Mike',
-      lastName: 'Agent',
-      email: 'mike@crm.com',
-      phone: '+1-555-0102',
-      role: 'agent',
-      department: 'Support',
-      status: 'inactive',
-      lastLogin: '2024-01-15 5:30 PM'
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { profile } = useAuth();
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching users:', error);
+        return;
+      }
+
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
   const getRoleColor = (role: string) => {
     return role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800';
@@ -51,6 +56,16 @@ const UserManagement: React.FC = () => {
     return status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
   };
 
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -59,12 +74,15 @@ const UserManagement: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
             <p className="text-gray-600">Manage system users and permissions</p>
           </div>
-          <Button>Add User</Button>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add User
+          </Button>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>System Users</CardTitle>
+            <CardTitle>System Users ({users.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -76,7 +94,7 @@ const UserManagement: React.FC = () => {
                     <th className="text-left py-3 px-4">Role</th>
                     <th className="text-left py-3 px-4">Department</th>
                     <th className="text-left py-3 px-4">Status</th>
-                    <th className="text-left py-3 px-4">Last Login</th>
+                    <th className="text-left py-3 px-4">Joined</th>
                     <th className="text-left py-3 px-4">Actions</th>
                   </tr>
                 </thead>
@@ -90,15 +108,14 @@ const UserManagement: React.FC = () => {
                           </div>
                           <div>
                             <p className="font-medium text-gray-900">
-                              {user.firstName} {user.lastName}
+                              {user.first_name} {user.last_name}
                             </p>
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <div>
-                          <p className="text-sm text-gray-900">{user.email}</p>
-                          <p className="text-sm text-gray-500">{user.phone}</p>
+                          <p className="text-sm text-gray-500">{user.phone || 'No phone'}</p>
                         </div>
                       </td>
                       <td className="py-4 px-4">
@@ -107,7 +124,7 @@ const UserManagement: React.FC = () => {
                         </Badge>
                       </td>
                       <td className="py-4 px-4">
-                        <p className="text-sm text-gray-900">{user.department}</p>
+                        <p className="text-sm text-gray-900">{user.department || 'Not assigned'}</p>
                       </td>
                       <td className="py-4 px-4">
                         <Badge className={getStatusColor(user.status)}>
@@ -115,14 +132,18 @@ const UserManagement: React.FC = () => {
                         </Badge>
                       </td>
                       <td className="py-4 px-4">
-                        <p className="text-sm text-gray-900">{user.lastLogin}</p>
+                        <p className="text-sm text-gray-900">
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </p>
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex space-x-2">
                           <Button variant="ghost" size="sm">Edit</Button>
-                          <Button variant="ghost" size="sm">
-                            <Phone className="h-4 w-4" />
-                          </Button>
+                          {user.phone && (
+                            <Button variant="ghost" size="sm">
+                              <Phone className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
