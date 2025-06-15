@@ -1,6 +1,7 @@
 
+
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { describe, it, expect } from 'vitest';
 import { Form, FormField, FormItem, FormMessage, FormControl } from './form';
@@ -40,9 +41,9 @@ const TestForm = ({ errorMessage }: { errorMessage: string }) => {
 describe('FormMessage', () => {
   it('should strip HTML and scripts from error messages', () => {
     const maliciousMessage = '<span>Malicious</span><script>alert("XSS")</script> and some text';
-    render(<TestForm errorMessage={maliciousMessage} />);
+    const { getByText } = render(<TestForm errorMessage={maliciousMessage} />);
     
-    const errorMessageElement = screen.getByText('Malicious and some text');
+    const errorMessageElement = getByText('Malicious and some text');
     expect(errorMessageElement).toBeInTheDocument();
     
     const scriptTag = document.querySelector('script');
@@ -54,8 +55,9 @@ describe('FormMessage', () => {
 
   it('should render plain text error messages correctly', () => {
     const plainMessage = 'This is a simple error.';
-    render(<TestForm errorMessage={plainMessage} />);
+    const { getByText } = render(<TestForm errorMessage={plainMessage} />);
     
-    expect(screen.getByText(plainMessage)).toBeInTheDocument();
+    expect(getByText(plainMessage)).toBeInTheDocument();
   });
 });
+
