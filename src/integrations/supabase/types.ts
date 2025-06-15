@@ -9,6 +9,164 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      kyc_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          file_path: string | null
+          id: string
+          lead_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          upload_date: string
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          file_path?: string | null
+          id?: string
+          lead_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          upload_date?: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          file_path?: string | null
+          id?: string
+          lead_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          upload_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kyc_documents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kyc_documents_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_activities: {
+        Row: {
+          activity_type: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          activity_type: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          activity_type?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          assigned_agent_id: string | null
+          balance: number
+          bonus_amount: number
+          country: string
+          created_at: string
+          date_of_birth: string | null
+          email: string
+          first_name: string
+          id: string
+          kyc_status: string | null
+          last_contact: string | null
+          last_name: string
+          phone: string | null
+          registration_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_agent_id?: string | null
+          balance?: number
+          bonus_amount?: number
+          country: string
+          created_at?: string
+          date_of_birth?: string | null
+          email: string
+          first_name: string
+          id?: string
+          kyc_status?: string | null
+          last_contact?: string | null
+          last_name: string
+          phone?: string | null
+          registration_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_agent_id?: string | null
+          balance?: number
+          bonus_amount?: number
+          country?: string
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string
+          first_name?: string
+          id?: string
+          kyc_status?: string | null
+          last_contact?: string | null
+          last_name?: string
+          phone?: string | null
+          registration_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_assigned_agent_id_fkey"
+            columns: ["assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       login_sessions: {
         Row: {
           created_at: string | null
@@ -83,6 +241,44 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          lead_id: string
+          reference: string
+          status: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          lead_id: string
+          reference: string
+          status?: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          lead_id?: string
+          reference?: string
+          status?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

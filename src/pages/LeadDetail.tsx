@@ -8,90 +8,75 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Phone, Bell, Check, X, Calendar } from 'lucide-react';
+import { User, Phone, Bell, Check, X, Calendar, Loader2 } from 'lucide-react';
+import { useLeadDetail } from '../hooks/useLeadDetail';
+import { useToast } from '@/hooks/use-toast';
 
 const LeadDetail: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
   const [newComment, setNewComment] = useState('');
   const [balanceAmount, setBalanceAmount] = useState('');
+  const { 
+    lead, 
+    activities, 
+    transactions, 
+    kycDocuments, 
+    isLoading, 
+    error, 
+    addActivity, 
+    addTransaction 
+  } = useLeadDetail(id || '');
 
-  // Mock lead data - in real app, fetch from API using id
-  const lead = {
-    id: id,
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@example.com',
-    phone: '+1-555-0123',
-    country: 'United States',
-    dateOfBirth: '1990-05-15',
-    status: 'kyc_pending',
-    balance: 1000,
-    bonusAmount: 100,
-    registrationDate: '2024-01-15',
-    lastContact: '2024-01-16',
-    assignedAgent: 'Jane Agent',
-    kycStatus: 'submitted',
-    kycDocuments: [
-      { type: 'Government ID', status: 'approved', uploadDate: '2024-01-15' },
-      { type: 'Proof of Address', status: 'pending', uploadDate: '2024-01-15' },
-      { type: 'Selfie with ID', status: 'pending', uploadDate: '2024-01-15' }
-    ]
-  };
+  const handleAddBalance = async () => {
+    if (!balanceAmount || !id) return;
+    
+    try {
+      const amount = parseFloat(balanceAmount);
+      if (isNaN(amount) || amount <= 0) {
+        toast({
+          title: "Invalid Amount",
+          description: "Please enter a valid positive amount.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-  const activities = [
-    {
-      id: 1,
-      type: 'comment',
-      user: 'Jane Agent',
-      content: 'Initial contact made via email',
-      timestamp: '2024-01-16 10:30 AM'
-    },
-    {
-      id: 2,
-      type: 'kyc_submit',
-      user: 'System',
-      content: 'KYC documents submitted',
-      timestamp: '2024-01-15 3:45 PM'
-    },
-    {
-      id: 3,
-      type: 'registration',
-      user: 'System',
-      content: 'Lead registered on platform',
-      timestamp: '2024-01-15 2:15 PM'
-    }
-  ];
-
-  const transactions = [
-    {
-      id: 1,
-      type: 'deposit',
-      amount: 1000,
-      status: 'completed',
-      date: '2024-01-15',
-      reference: 'DEP001'
-    },
-    {
-      id: 2,
-      type: 'bonus',
-      amount: 100,
-      status: 'completed',
-      date: '2024-01-15',
-      reference: 'BON001'
-    }
-  ];
-
-  const handleAddBalance = () => {
-    if (balanceAmount) {
-      console.log('Adding balance:', balanceAmount);
+      const reference = `DEP${Date.now()}`;
+      await addTransaction('deposit', amount, reference);
+      
       setBalanceAmount('');
+      toast({
+        title: "Balance Added",
+        description: `Successfully added $${amount} to the lead's balance.`,
+      });
+    } catch (error) {
+      console.error('Error adding balance:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add balance. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleAddComment = () => {
-    if (newComment.trim()) {
-      console.log('Adding comment:', newComment);
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !id) return;
+    
+    try {
+      await addActivity('comment', newComment.trim());
       setNewComment('');
+      toast({
+        title: "Comment Added",
+        description: "Your comment has been added successfully.",
+      });
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -104,13 +89,40 @@ const LeadDetail: React.FC = () => {
     }
   };
 
+  const formatActivityType = (type: string) => {
+    return type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !lead) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-red-600 mb-2">Error loading lead details</p>
+            <p className="text-gray-500">{error || 'Lead not found'}</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {lead.firstName} {lead.lastName}
+              {lead.first_name} {lead.last_name}
             </h1>
             <p className="text-gray-600">{lead.email}</p>
           </div>
@@ -148,7 +160,7 @@ const LeadDetail: React.FC = () => {
                   <CardContent className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-500">Name</label>
-                      <p className="text-sm">{lead.firstName} {lead.lastName}</p>
+                      <p className="text-sm">{lead.first_name} {lead.last_name}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Email</label>
@@ -156,7 +168,7 @@ const LeadDetail: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Phone</label>
-                      <p className="text-sm">{lead.phone}</p>
+                      <p className="text-sm">{lead.phone || 'N/A'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Country</label>
@@ -164,11 +176,11 @@ const LeadDetail: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Date of Birth</label>
-                      <p className="text-sm">{lead.dateOfBirth}</p>
+                      <p className="text-sm">{lead.date_of_birth || 'N/A'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Registration Date</label>
-                      <p className="text-sm">{lead.registrationDate}</p>
+                      <p className="text-sm">{new Date(lead.registration_date).toLocaleDateString()}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -181,11 +193,11 @@ const LeadDetail: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {lead.kycDocuments.map((doc, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                      {kycDocuments.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div>
-                            <p className="font-medium">{doc.type}</p>
-                            <p className="text-sm text-gray-500">Uploaded: {doc.uploadDate}</p>
+                            <p className="font-medium">{doc.document_type.replace('_', ' ').toUpperCase()}</p>
+                            <p className="text-sm text-gray-500">Uploaded: {new Date(doc.upload_date).toLocaleDateString()}</p>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Badge className={getStatusColor(doc.status)}>
@@ -204,6 +216,9 @@ const LeadDetail: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                      {kycDocuments.length === 0 && (
+                        <p className="text-gray-500 text-center py-4">No KYC documents uploaded yet.</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -237,14 +252,17 @@ const LeadDetail: React.FC = () => {
                         <div key={transaction.id} className="flex justify-between items-center p-3 border rounded">
                           <div>
                             <p className="font-medium capitalize">{transaction.type}</p>
-                            <p className="text-sm text-gray-500">{transaction.date}</p>
+                            <p className="text-sm text-gray-500">{new Date(transaction.created_at).toLocaleDateString()}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-medium">${transaction.amount}</p>
+                            <p className="font-medium">${Number(transaction.amount).toLocaleString()}</p>
                             <p className="text-sm text-gray-500">{transaction.reference}</p>
                           </div>
                         </div>
                       ))}
+                      {transactions.length === 0 && (
+                        <p className="text-gray-500 text-center py-4">No transactions found.</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -264,11 +282,19 @@ const LeadDetail: React.FC = () => {
                               <User className="h-4 w-4 text-blue-600" />
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm">{activity.content}</p>
-                              <p className="text-xs text-gray-500">{activity.user} • {activity.timestamp}</p>
+                              <p className="text-sm">{activity.content || formatActivityType(activity.activity_type)}</p>
+                              <p className="text-xs text-gray-500">
+                                {activity.creator ? 
+                                  `${activity.creator.first_name} ${activity.creator.last_name}` : 
+                                  'System'
+                                } • {new Date(activity.created_at).toLocaleString()}
+                              </p>
                             </div>
                           </div>
                         ))}
+                        {activities.length === 0 && (
+                          <p className="text-gray-500 text-center py-4">No activities found.</p>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -285,11 +311,11 @@ const LeadDetail: React.FC = () => {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Current Balance</label>
-                  <p className="text-2xl font-bold text-green-600">${lead.balance.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">${Number(lead.balance).toLocaleString()}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Bonus Amount</label>
-                  <p className="text-lg font-semibold text-blue-600">${lead.bonusAmount.toLocaleString()}</p>
+                  <p className="text-lg font-semibold text-blue-600">${Number(lead.bonus_amount).toLocaleString()}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>
@@ -299,7 +325,12 @@ const LeadDetail: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Assigned Agent</label>
-                  <p className="text-sm">{lead.assignedAgent}</p>
+                  <p className="text-sm">
+                    {lead.assigned_agent ? 
+                      `${lead.assigned_agent.first_name} ${lead.assigned_agent.last_name}` : 
+                      'Unassigned'
+                    }
+                  </p>
                 </div>
               </CardContent>
             </Card>

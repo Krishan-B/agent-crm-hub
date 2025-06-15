@@ -7,84 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, User, Phone, Bell } from 'lucide-react';
+import { Search, User, Phone, Bell, Loader2 } from 'lucide-react';
+import { useLeads } from '../hooks/useLeads';
 
 const Leads: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-
-  const mockLeads = [
-    {
-      id: '1',
-      firstName: 'John',
-      lastName: 'Smith',
-      email: 'john.smith@example.com',
-      phone: '+1-555-0123',
-      country: 'United States',
-      status: 'new',
-      balance: 0,
-      bonusAmount: 0,
-      registrationDate: '2024-01-15',
-      lastContact: null,
-      assignedAgent: 'Jane Agent'
-    },
-    {
-      id: '2',
-      firstName: 'Emma',
-      lastName: 'Johnson',
-      email: 'emma.johnson@example.com',
-      phone: '+1-555-0124',
-      country: 'Canada',
-      status: 'kyc_pending',
-      balance: 1000,
-      bonusAmount: 100,
-      registrationDate: '2024-01-14',
-      lastContact: '2024-01-15',
-      assignedAgent: 'Jane Agent'
-    },
-    {
-      id: '3',
-      firstName: 'Michael',
-      lastName: 'Brown',
-      email: 'michael.brown@example.com',
-      phone: '+44-20-7946-0958',
-      country: 'United Kingdom',
-      status: 'contacted',
-      balance: 500,
-      bonusAmount: 50,
-      registrationDate: '2024-01-13',
-      lastContact: '2024-01-14',
-      assignedAgent: 'John Admin'
-    },
-    {
-      id: '4',
-      firstName: 'Sarah',
-      lastName: 'Davis',
-      email: 'sarah.davis@example.com',
-      phone: '+61-2-9374-4000',
-      country: 'Australia',
-      status: 'kyc_approved',
-      balance: 2000,
-      bonusAmount: 200,
-      registrationDate: '2024-01-12',
-      lastContact: '2024-01-13',
-      assignedAgent: 'Jane Agent'
-    },
-    {
-      id: '5',
-      firstName: 'David',
-      lastName: 'Wilson',
-      email: 'david.wilson@example.com',
-      phone: '+49-30-12345678',
-      country: 'Germany',
-      status: 'active',
-      balance: 5000,
-      bonusAmount: 500,
-      registrationDate: '2024-01-10',
-      lastContact: '2024-01-12',
-      assignedAgent: 'John Admin'
-    }
-  ];
+  const { leads, isLoading, error } = useLeads();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -99,11 +28,24 @@ const Leads: React.FC = () => {
     }
   };
 
-  const filteredLeads = mockLeads.filter(lead => {
-    const matchesSearch = `${lead.firstName} ${lead.lastName} ${lead.email}`.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = `${lead.first_name} ${lead.last_name} ${lead.email}`.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-red-600 mb-2">Error loading leads</p>
+            <p className="text-gray-500">{error}</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -144,74 +86,90 @@ const Leads: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4">Lead</th>
-                    <th className="text-left py-3 px-4">Contact</th>
-                    <th className="text-left py-3 px-4">Status</th>
-                    <th className="text-left py-3 px-4">Balance</th>
-                    <th className="text-left py-3 px-4">Assigned Agent</th>
-                    <th className="text-left py-3 px-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLeads.map((lead) => (
-                    <tr key={lead.id} className="border-b hover:bg-gray-50">
-                      <td className="py-4 px-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User className="h-4 w-4 text-blue-600" />
-                          </div>
-                          <div>
-                            <Link 
-                              to={`/leads/${lead.id}`}
-                              className="font-medium text-gray-900 hover:text-blue-600"
-                            >
-                              {lead.firstName} {lead.lastName}
-                            </Link>
-                            <p className="text-sm text-gray-500">{lead.country}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div>
-                          <p className="text-sm text-gray-900">{lead.email}</p>
-                          <p className="text-sm text-gray-500">{lead.phone}</p>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <Badge className={getStatusColor(lead.status)}>
-                          {lead.status.replace('_', ' ')}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div>
-                          <p className="font-medium">${lead.balance.toLocaleString()}</p>
-                          {lead.bonusAmount > 0 && (
-                            <p className="text-sm text-green-600">+${lead.bonusAmount} bonus</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <p className="text-sm text-gray-900">{lead.assignedAgent}</p>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Phone className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Bell className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Lead</th>
+                      <th className="text-left py-3 px-4">Contact</th>
+                      <th className="text-left py-3 px-4">Status</th>
+                      <th className="text-left py-3 px-4">Balance</th>
+                      <th className="text-left py-3 px-4">Assigned Agent</th>
+                      <th className="text-left py-3 px-4">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredLeads.map((lead) => (
+                      <tr key={lead.id} className="border-b hover:bg-gray-50">
+                        <td className="py-4 px-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <Link 
+                                to={`/leads/${lead.id}`}
+                                className="font-medium text-gray-900 hover:text-blue-600"
+                              >
+                                {lead.first_name} {lead.last_name}
+                              </Link>
+                              <p className="text-sm text-gray-500">{lead.country}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div>
+                            <p className="text-sm text-gray-900">{lead.email}</p>
+                            <p className="text-sm text-gray-500">{lead.phone}</p>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <Badge className={getStatusColor(lead.status)}>
+                            {lead.status.replace('_', ' ')}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div>
+                            <p className="font-medium">${Number(lead.balance).toLocaleString()}</p>
+                            {lead.bonus_amount > 0 && (
+                              <p className="text-sm text-green-600">+${Number(lead.bonus_amount)} bonus</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <p className="text-sm text-gray-900">
+                            {lead.assigned_agent ? 
+                              `${lead.assigned_agent.first_name} ${lead.assigned_agent.last_name}` : 
+                              'Unassigned'
+                            }
+                          </p>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex space-x-2">
+                            <Button variant="ghost" size="sm">
+                              <Phone className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Bell className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {filteredLeads.length === 0 && !isLoading && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No leads found matching your criteria.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
