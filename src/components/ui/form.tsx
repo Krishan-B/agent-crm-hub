@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import * as LabelPrimitive from "@radix-ui/react-label"
 import { Slot } from "@radix-ui/react-slot"
@@ -153,7 +152,8 @@ const FormMessage = React.forwardRef<
     return null
   }
 
-  const sanitizedMessage = DOMPurify.sanitize(body, { USE_PROFILES: { html: false } });
+  // Ensure body is a string before sanitizing
+  const sanitizedMessage = DOMPurify.sanitize(String(body), { USE_PROFILES: { html: false } });
 
   return (
     <p

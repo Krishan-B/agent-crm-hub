@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { useForm, FormProvider } from 'react-hook-form';
+import { describe, it, expect } from 'vitest';
 import { Form, FormField, FormItem, FormMessage, FormControl } from './form';
 import { Input } from './input';
 
@@ -58,3 +59,4 @@ describe('FormMessage', () => {
     expect(screen.getByText(plainMessage)).toBeInTheDocument();
   });
 });
+

@@ -1,4 +1,5 @@
 
+import { describe, it, expect } from 'vitest';
 import { sanitizeInput } from './sanitize';
 
 describe('sanitizeInput', () => {
@@ -26,3 +27,4 @@ describe('sanitizeInput', () => {
     expect(sanitizeInput(mixed)).toBe('Text with  and link');
   });
 });
+
