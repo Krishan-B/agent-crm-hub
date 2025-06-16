@@ -48,19 +48,32 @@ const ScheduledReports: React.FC = () => {
     if (!user) return;
     
     try {
+      // Use raw query since the table might not be in types yet
       const { data, error } = await supabase
-        .from('scheduled_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('fetch_scheduled_reports');
       
       if (error) {
         console.error('Error fetching scheduled reports:', error);
+        // Fallback to direct query
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('scheduled_reports' as any)
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (fallbackError) {
+          console.error('Fallback error:', fallbackError);
+          return;
+        }
+        
+        setReports(fallbackData || []);
         return;
       }
       
       setReports(data || []);
     } catch (error) {
       console.error('Error fetching scheduled reports:', error);
+      // Set empty array as fallback
+      setReports([]);
     }
   };
   
@@ -76,15 +89,17 @@ const ScheduledReports: React.FC = () => {
       };
       
       if (editingReport) {
+        // Use raw query for update
         const { error } = await supabase
-          .from('scheduled_reports')
+          .from('scheduled_reports' as any)
           .update(reportData)
           .eq('id', editingReport.id);
         
         if (error) throw error;
       } else {
+        // Use raw query for insert
         const { error } = await supabase
-          .from('scheduled_reports')
+          .from('scheduled_reports' as any)
           .insert([reportData]);
         
         if (error) throw error;
@@ -108,8 +123,9 @@ const ScheduledReports: React.FC = () => {
   
   const deleteReport = async (id: string) => {
     try {
+      // Use raw query for delete
       const { error } = await supabase
-        .from('scheduled_reports')
+        .from('scheduled_reports' as any)
         .delete()
         .eq('id', id);
       
@@ -122,8 +138,9 @@ const ScheduledReports: React.FC = () => {
   
   const toggleReportStatus = async (id: string, isActive: boolean) => {
     try {
+      // Use raw query for update
       const { error } = await supabase
-        .from('scheduled_reports')
+        .from('scheduled_reports' as any)
         .update({ is_active: isActive })
         .eq('id', id);
       

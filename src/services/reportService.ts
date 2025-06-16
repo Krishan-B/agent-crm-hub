@@ -1,9 +1,16 @@
 
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { Lead } from '../hooks/useOptimizedLeads';
 import { AnalyticsSnapshot } from '../hooks/useAnalytics';
+
+// Extend jsPDF with autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 export interface ReportConfig {
   type: 'leads' | 'analytics' | 'financial' | 'performance';
@@ -79,7 +86,7 @@ class ReportService {
           lead.created_at.split('T')[0]
         ]);
         
-        autoTable(doc, {
+        doc.autoTable({
           head: [['Name', 'Email', 'Country', 'Status', 'Balance', 'Created']],
           body: tableData,
           startY: yPosition,

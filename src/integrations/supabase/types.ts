@@ -775,6 +775,51 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_reports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          format: string
+          frequency: string
+          id: string
+          is_active: boolean
+          last_run: string | null
+          name: string
+          next_run: string
+          recipients: string[]
+          report_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          format: string
+          frequency: string
+          id?: string
+          is_active?: boolean
+          last_run?: string | null
+          name: string
+          next_run: string
+          recipients?: string[]
+          report_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          format?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_run?: string | null
+          name?: string
+          next_run?: string
+          recipients?: string[]
+          report_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
