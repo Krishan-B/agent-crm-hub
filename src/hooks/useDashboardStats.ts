@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useRealTimeData } from './useRealTimeData';
+import { dashboardCache } from '@/utils/cache';
 
 export interface DashboardStats {
   totalLeads: number;
@@ -34,78 +35,83 @@ export const useDashboardStats = () => {
   const fetchStats = async () => {
     if (!user) return;
     
+    // Check cache first
+    const cacheKey = `dashboard_stats_${user.id}`;
+    const cached = dashboardCache.get(cacheKey);
+    if (cached) {
+      setStats(cached.stats);
+      setRecentLeads(cached.recentLeads);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
     try {
-      // Fetch total leads count
-      const { count: totalLeads, error: totalError } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true });
-
-      if (totalError) {
-        console.error('Error fetching total leads:', totalError);
-      }
-
-      // Fetch KYC approved count
-      const { count: kycApproved, error: kycApprovedError } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('kyc_status', 'approved');
-
-      if (kycApprovedError) {
-        console.error('Error fetching KYC approved:', kycApprovedError);
-      }
-
-      // Fetch pending KYC count
-      const { count: pendingKyc, error: pendingKycError } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .in('kyc_status', ['pending', 'submitted']);
-
-      if (pendingKycError) {
-        console.error('Error fetching pending KYC:', pendingKycError);
-      }
-
-      // Fetch today's active leads (leads with activities today)
-      const today = new Date().toISOString().split('T')[0];
-      const { count: activeToday, error: activeTodayError } = await supabase
-        .from('lead_activities')
-        .select('lead_id', { count: 'exact', head: true })
-        .gte('created_at', `${today}T00:00:00.000Z`)
-        .lte('created_at', `${today}T23:59:59.999Z`);
-
-      if (activeTodayError) {
-        console.error('Error fetching active today:', activeTodayError);
-      }
-
-      setStats({
-        totalLeads: totalLeads || 0,
-        kycApproved: kycApproved || 0,
-        pendingKyc: pendingKyc || 0,
-        activeToday: activeToday || 0
-      });
-
-      // Fetch recent leads
-      const { data: recentLeadsData, error: recentLeadsError } = await supabase
-        .from('leads')
-        .select('id, first_name, last_name, email, status, country')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (recentLeadsError) {
-        console.error('Error fetching recent leads:', recentLeadsError);
-      } else {
-        const formattedRecentLeads = recentLeadsData?.map(lead => ({
-          id: lead.id,
-          name: `${lead.first_name} ${lead.last_name}`,
-          email: lead.email,
-          status: lead.status,
-          country: lead.country
-        })) || [];
+      // Use parallel queries for better performance
+      const [
+        totalLeadsResult,
+        kycApprovedResult,
+        pendingKycResult,
+        activeTodayResult,
+        recentLeadsResult
+      ] = await Promise.all([
+        // Total leads count
+        supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true }),
         
-        setRecentLeads(formattedRecentLeads);
-      }
+        // KYC approved count
+        supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .eq('kyc_status', 'approved'),
+        
+        // Pending KYC count
+        supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .in('kyc_status', ['pending', 'submitted']),
+        
+        // Today's active leads (with activities)
+        supabase
+          .from('lead_activities')
+          .select('lead_id', { count: 'exact', head: true })
+          .gte('created_at', new Date().toISOString().split('T')[0] + 'T00:00:00.000Z')
+          .lte('created_at', new Date().toISOString().split('T')[0] + 'T23:59:59.999Z'),
+        
+        // Recent leads (optimized query)
+        supabase
+          .from('leads')
+          .select('id, first_name, last_name, email, status, country')
+          .order('created_at', { ascending: false })
+          .limit(5)
+      ]);
+
+      const newStats = {
+        totalLeads: totalLeadsResult.count || 0,
+        kycApproved: kycApprovedResult.count || 0,
+        pendingKyc: pendingKycResult.count || 0,
+        activeToday: activeTodayResult.count || 0
+      };
+
+      const formattedRecentLeads = recentLeadsResult.data?.map(lead => ({
+        id: lead.id,
+        name: `${lead.first_name} ${lead.last_name}`,
+        email: lead.email,
+        status: lead.status,
+        country: lead.country
+      })) || [];
+
+      setStats(newStats);
+      setRecentLeads(formattedRecentLeads);
+
+      // Cache the results
+      dashboardCache.set(cacheKey, {
+        stats: newStats,
+        recentLeads: formattedRecentLeads
+      });
 
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
@@ -117,9 +123,18 @@ export const useDashboardStats = () => {
 
   // Set up real-time subscriptions to refresh stats when data changes
   useRealTimeData({
-    onLeadsChange: fetchStats,
-    onActivitiesChange: fetchStats,
-    onKycDocumentsChange: fetchStats
+    onLeadsChange: () => {
+      dashboardCache.clear();
+      fetchStats();
+    },
+    onActivitiesChange: () => {
+      dashboardCache.clear();
+      fetchStats();
+    },
+    onKycDocumentsChange: () => {
+      dashboardCache.clear();
+      fetchStats();
+    }
   });
 
   useEffect(() => {

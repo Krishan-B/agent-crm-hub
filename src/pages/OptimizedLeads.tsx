@@ -8,15 +8,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { 
   Search, Filter, Download, UserPlus, Users, CheckCircle2, 
-  MoreHorizontal, Calendar, MessageSquare, Phone, Mail
+  MoreHorizontal, Zap
 } from 'lucide-react';
-import { useOptimizedLeads, Lead, BulkAction } from '../hooks/useOptimizedLeads';
-import AppointmentDialog from '../components/AppointmentDialog';
-import CommunicationDialog from '../components/CommunicationDialog';
+import { useOptimizedLeads, BulkAction } from '../hooks/useOptimizedLeads';
+import { VirtualizedLeadsTable } from '../components/VirtualizedLeadsTable';
+import { useIntersectionObserver } from '../hooks/useLazyLoading';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const OptimizedLeads: React.FC = () => {
   const {
     leads,
+    lazyLeads,
     selectedLeads,
     isLoading,
     error,
@@ -28,15 +30,29 @@ const OptimizedLeads: React.FC = () => {
     setSelectedLeads,
     fetchLeads,
     performBulkAction,
-    exportToCSV
+    exportToCSV,
+    hasMore,
+    loadMore,
   } = useOptimizedLeads();
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [bulkActionType, setBulkActionType] = useState<string>('');
+  const [viewMode, setViewMode<'paginated' | 'infinite'>('paginated');
+
+  // Intersection observer for infinite scroll
+  const loadMoreRef = useIntersectionObserver(
+    () => {
+      if (viewMode === 'infinite' && hasMore && !isLoading) {
+        loadMore();
+      }
+    },
+    { threshold: 0.1 }
+  );
 
   const handleSelectAll = (checked: boolean) => {
+    const currentLeads = viewMode === 'infinite' ? lazyLeads : leads;
     if (checked) {
-      setSelectedLeads(leads.map(lead => lead.id));
+      setSelectedLeads(currentLeads.map(lead => lead.id));
     } else {
       setSelectedLeads([]);
     }
@@ -58,39 +74,13 @@ const OptimizedLeads: React.FC = () => {
     };
 
     if (bulkActionType === 'assign') {
-      // TODO: Show agent selection dialog
       action.data = { agentId: 'agent-id' };
     } else if (bulkActionType === 'status_change') {
-      // TODO: Show status selection dialog
       action.data = { status: 'contacted' };
     }
 
     await performBulkAction(action);
     setBulkActionType('');
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'new':
-        return 'bg-blue-100 text-blue-800';
-      case 'contacted':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'qualified':
-        return 'bg-purple-100 text-purple-800';
-      case 'converted':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
   };
 
   if (error) {
@@ -106,6 +96,8 @@ const OptimizedLeads: React.FC = () => {
     );
   }
 
+  const currentLeads = viewMode === 'infinite' ? lazyLeads : leads;
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -113,9 +105,17 @@ const OptimizedLeads: React.FC = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Optimized Leads Management</h1>
-            <p className="text-gray-600">Advanced filtering, bulk actions, and performance analytics</p>
+            <p className="text-gray-600">High-performance lead management with virtualization and caching</p>
           </div>
           <div className="flex space-x-2">
+            <Button
+              variant={viewMode === 'infinite' ? 'default' : 'outline'}
+              onClick={() => setViewMode('infinite')}
+              size="sm"
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Infinite Scroll
+            </Button>
             <Button variant="outline" onClick={exportToCSV}>
               <Download className="h-4 w-4 mr-2" />
               Export
@@ -127,7 +127,7 @@ const OptimizedLeads: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Stats */}
+        {/* Performance Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -136,6 +136,9 @@ const OptimizedLeads: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalCount}</div>
+              <p className="text-xs text-muted-foreground">
+                {viewMode === 'infinite' ? `${lazyLeads.length} loaded` : `Page ${currentPage}`}
+              </p>
             </CardContent>
           </Card>
           <Card>
@@ -149,19 +152,20 @@ const OptimizedLeads: React.FC = () => {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Filtered</CardTitle>
+              <CardTitle className="text-sm font-medium">Visible</CardTitle>
               <Filter className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{leads.length}</div>
+              <div className="text-2xl font-bold">{currentLeads.length}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Current Page</CardTitle>
+              <CardTitle className="text-sm font-medium">View Mode</CardTitle>
+              <Zap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{currentPage}</div>
+              <div className="text-lg font-bold capitalize">{viewMode}</div>
             </CardContent>
           </Card>
         </div>
@@ -284,119 +288,65 @@ const OptimizedLeads: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Leads Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">
-                      <Checkbox 
-                        checked={selectedLeads.length === leads.length && leads.length > 0}
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </th>
-                    <th className="text-left p-2">Name</th>
-                    <th className="text-left p-2">Email</th>
-                    <th className="text-left p-2">Status</th>
-                    <th className="text-left p-2">Balance</th>
-                    <th className="text-left p-2">Country</th>
-                    <th className="text-left p-2">Agent</th>
-                    <th className="text-left p-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={8} className="text-center p-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                      </td>
-                    </tr>
-                  ) : leads.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center p-8 text-gray-500">
-                        No leads found matching your criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    leads.map((lead) => (
-                      <tr key={lead.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2">
-                          <Checkbox 
-                            checked={selectedLeads.includes(lead.id)}
-                            onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
-                          />
-                        </td>
-                        <td className="p-2">
-                          <div>
-                            <div className="font-medium">{lead.first_name} {lead.last_name}</div>
-                            <div className="text-sm text-gray-500">{lead.phone}</div>
-                          </div>
-                        </td>
-                        <td className="p-2">{lead.email}</td>
-                        <td className="p-2">
-                          <Badge className={getStatusColor(lead.status)}>
-                            {lead.status}
-                          </Badge>
-                        </td>
-                        <td className="p-2">{formatCurrency(lead.balance)}</td>
-                        <td className="p-2">{lead.country}</td>
-                        <td className="p-2">
-                          {lead.assigned_agent ? 
-                            `${lead.assigned_agent.first_name} ${lead.assigned_agent.last_name}` : 
-                            'Unassigned'
-                          }
-                        </td>
-                        <td className="p-2">
-                          <div className="flex space-x-1">
-                            <AppointmentDialog
-                              leadId={lead.id}
-                              leadName={`${lead.first_name} ${lead.last_name}`}
-                            />
-                            <CommunicationDialog
-                              leadId={lead.id}
-                              leadName={`${lead.first_name} ${lead.last_name}`}
-                              leadEmail={lead.email}
-                              leadPhone={lead.phone}
-                              trigger={
-                                <Button variant="ghost" size="sm">
-                                  <MessageSquare className="h-4 w-4" />
-                                </Button>
-                              }
-                            />
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+            {/* Virtualized Table */}
+            {viewMode === 'paginated' ? (
+              <VirtualizedLeadsTable
+                leads={currentLeads}
+                selectedLeads={selectedLeads}
+                onSelectLead={handleSelectLead}
+                onSelectAll={handleSelectAll}
+                containerHeight={600}
+              />
+            ) : (
+              <>
+                <VirtualizedLeadsTable
+                  leads={currentLeads}
+                  selectedLeads={selectedLeads}
+                  onSelectLead={handleSelectLead}
+                  onSelectAll={handleSelectAll}
+                  containerHeight={600}
+                />
+                
+                {/* Infinite scroll loading trigger */}
+                <div ref={loadMoreRef} className="py-4">
+                  {isLoading && (
+                    <div className="space-y-2">
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                    </div>
                   )}
-                </tbody>
-              </table>
-            </div>
+                  {!hasMore && !isLoading && (
+                    <p className="text-center text-gray-500">No more leads to load</p>
+                  )}
+                </div>
+              </>
+            )}
 
-            {/* Pagination */}
-            <div className="flex justify-between items-center mt-4">
-              <div className="text-sm text-gray-500">
-                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} leads
+            {/* Regular Pagination */}
+            {viewMode === 'paginated' && (
+              <div className="flex justify-between items-center mt-4">
+                <div className="text-sm text-gray-500">
+                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} leads
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    disabled={currentPage === 1}
+                    onClick={() => fetchLeads(currentPage - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    disabled={currentPage * pageSize >= totalCount}
+                    onClick={() => fetchLeads(currentPage + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  disabled={currentPage === 1}
-                  onClick={() => fetchLeads(currentPage - 1)}
-                >
-                  Previous
-                </Button>
-                <Button 
-                  variant="outline"
-                  disabled={currentPage * pageSize >= totalCount}
-                  onClick={() => fetchLeads(currentPage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

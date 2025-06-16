@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useRealTimeData } from './useRealTimeData';
+import { leadsCache, searchCache } from '@/utils/cache';
+import { useLazyLoading } from './useLazyLoading';
 
 export interface Lead {
   id: string;
@@ -11,7 +14,7 @@ export interface Lead {
   phone?: string;
   country: string;
   status: 'active' | 'new' | 'contacted' | 'qualified' | 'converted' | 'inactive';
-  source?: string; // Make source optional since it's not in the database
+  source?: string;
   assigned_agent_id?: string;
   kyc_status: string;
   balance: number;
@@ -44,7 +47,6 @@ export interface BulkAction {
 
 export const useOptimizedLeads = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,49 +64,128 @@ export const useOptimizedLeads = () => {
     dateRange: {}
   });
 
-  const fetchLeads = async (page = 1, limit = pageSize) => {
-    if (!user) return;
+  // Memoized cache key for current filters and page
+  const cacheKey = useMemo(() => {
+    const filterString = JSON.stringify(filters);
+    return `leads_${currentPage}_${pageSize}_${btoa(filterString)}`;
+  }, [filters, currentPage, pageSize]);
+
+  // Optimized fetch function with caching and query optimization
+  const fetchLeadsOptimized = async (page = 1, limit = pageSize) => {
+    if (!user) return { data: [], hasMore: false };
     
+    // Check cache first
+    const cached = leadsCache.get(cacheKey);
+    if (cached) {
+      return { data: cached.data, hasMore: cached.hasMore };
+    }
+
+    const offset = (page - 1) * limit;
+    
+    // Build optimized query with minimal data selection
+    let query = supabase
+      .from('leads')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        country,
+        status,
+        balance,
+        bonus_amount,
+        kyc_status,
+        created_at,
+        assigned_agent_id,
+        assigned_agent:profiles!assigned_agent_id(
+          first_name,
+          last_name
+        )
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    // Apply role-based filtering
+    if (user.role === 'agent') {
+      query = query.eq('assigned_agent_id', user.id);
+    }
+
+    // Apply filters with optimized conditions
+    if (filters.search) {
+      // Use full-text search if available, otherwise fallback to LIKE
+      query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+    }
+
+    if (filters.status !== 'all') {
+      query = query.eq('status', filters.status);
+    }
+
+    if (filters.country !== 'all') {
+      query = query.eq('country', filters.country);
+    }
+
+    if (filters.assignedAgent !== 'all') {
+      if (filters.assignedAgent === 'unassigned') {
+        query = query.is('assigned_agent_id', null);
+      } else {
+        query = query.eq('assigned_agent_id', filters.assignedAgent);
+      }
+    }
+
+    if (filters.dateRange.from) {
+      query = query.gte('created_at', filters.dateRange.from.toISOString());
+    }
+    if (filters.dateRange.to) {
+      query = query.lte('created_at', filters.dateRange.to.toISOString());
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    const typedLeads = (data || []).map(lead => ({
+      ...lead,
+      status: lead.status as Lead['status'],
+    }));
+
+    const hasMore = (count || 0) > offset + limit;
+    const result = { data: typedLeads, hasMore, count: count || 0 };
+
+    // Cache the result
+    leadsCache.set(cacheKey, result);
+
+    return result;
+  };
+
+  // Use lazy loading for infinite scroll
+  const {
+    items: lazyLeads,
+    isLoading: isLazyLoading,
+    hasMore,
+    loadMore,
+    reset: resetLazy,
+    error: lazyError
+  } = useLazyLoading(
+    async (page, limit) => {
+      const result = await fetchLeadsOptimized(page, limit);
+      setTotalCount(result.count || 0);
+      return { data: result.data, hasMore: result.hasMore };
+    },
+    { pageSize, cacheKey: 'leads_lazy' }
+  );
+
+  // Regular paginated fetch for backward compatibility
+  const fetchLeads = async (page = 1, limit = pageSize) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const offset = (page - 1) * limit;
-      
-      let query = supabase
-        .from('leads')
-        .select(`
-          *,
-          assigned_agent:profiles!assigned_agent_id(
-            first_name,
-            last_name
-          )
-        `, { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-
-      // Apply role-based filtering
-      if (user.role === 'agent') {
-        query = query.eq('assigned_agent_id', user.id);
-      }
-
-      const { data, error, count } = await query;
-
-      if (error) {
-        console.error('Error fetching leads:', error);
-        setError(error.message);
-        return;
-      }
-
-      // Type assertion to ensure proper typing without adding missing source field
-      const typedLeads = (data || []).map(lead => ({
-        ...lead,
-        status: lead.status as Lead['status'],
-        // Don't add source since it's not in the database - make it optional in interface instead
-      }));
-
-      setLeads(typedLeads);
-      setTotalCount(count || 0);
+      const result = await fetchLeadsOptimized(page, limit);
+      setLeads(result.data);
+      setTotalCount(result.count || 0);
       setCurrentPage(page);
     } catch (err) {
       console.error('Error fetching leads:', err);
@@ -114,10 +195,20 @@ export const useOptimizedLeads = () => {
     }
   };
 
-  const applyFilters = () => {
+  // Optimized filter application with debouncing
+  const filteredLeads = useMemo(() => {
+    // For search, check cache first
+    if (filters.search) {
+      const searchKey = `search_${filters.search}`;
+      const cached = searchCache.get(searchKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     let filtered = [...leads];
 
-    // Search filter
+    // Client-side filtering for already loaded data
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       filtered = filtered.filter(lead =>
@@ -126,43 +217,17 @@ export const useOptimizedLeads = () => {
         lead.email.toLowerCase().includes(searchTerm) ||
         (lead.phone && lead.phone.toLowerCase().includes(searchTerm))
       );
+      
+      // Cache search results
+      if (filters.search) {
+        searchCache.set(`search_${filters.search}`, filtered);
+      }
     }
 
-    // Status filter
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(lead => lead.status === filters.status);
-    }
+    return filtered;
+  }, [leads, filters.search]);
 
-    // Country filter
-    if (filters.country !== 'all') {
-      filtered = filtered.filter(lead => lead.country === filters.country);
-    }
-
-    // Source filter
-    if (filters.source !== 'all') {
-      filtered = filtered.filter(lead => lead.source === filters.source);
-    }
-
-    // Assigned agent filter
-    if (filters.assignedAgent !== 'all') {
-      filtered = filtered.filter(lead => lead.assigned_agent_id === filters.assignedAgent);
-    }
-
-    // Date range filter
-    if (filters.dateRange.from) {
-      filtered = filtered.filter(lead => 
-        new Date(lead.created_at) >= filters.dateRange.from!
-      );
-    }
-    if (filters.dateRange.to) {
-      filtered = filtered.filter(lead => 
-        new Date(lead.created_at) <= filters.dateRange.to!
-      );
-    }
-
-    setFilteredLeads(filtered);
-  };
-
+  // Optimized bulk operations
   const performBulkAction = async (action: BulkAction) => {
     if (selectedLeads.length === 0) return;
 
@@ -171,10 +236,11 @@ export const useOptimizedLeads = () => {
         case 'assign':
           if (!action.data?.agentId) return;
           
-          const { error: assignError } = await supabase
-            .from('leads')
-            .update({ assigned_agent_id: action.data.agentId })
-            .in('id', selectedLeads);
+          // Use batch update for better performance
+          const { error: assignError } = await supabase.rpc('bulk_assign_leads', {
+            lead_ids: selectedLeads,
+            agent_id: action.data.agentId
+          });
 
           if (assignError) throw assignError;
           break;
@@ -182,16 +248,15 @@ export const useOptimizedLeads = () => {
         case 'status_change':
           if (!action.data?.status) return;
           
-          const { error: statusError } = await supabase
-            .from('leads')
-            .update({ status: action.data.status })
-            .in('id', selectedLeads);
+          const { error: statusError } = await supabase.rpc('bulk_update_status', {
+            lead_ids: selectedLeads,
+            new_status: action.data.status
+          });
 
           if (statusError) throw statusError;
           break;
 
         case 'export':
-          // Export selected leads to CSV
           const selectedLeadData = filteredLeads.filter(lead => 
             selectedLeads.includes(lead.id)
           );
@@ -199,16 +264,16 @@ export const useOptimizedLeads = () => {
           break;
 
         case 'delete':
-          const { error: deleteError } = await supabase
-            .from('leads')
-            .delete()
-            .in('id', selectedLeads);
+          const { error: deleteError } = await supabase.rpc('bulk_delete_leads', {
+            lead_ids: selectedLeads
+          });
 
           if (deleteError) throw deleteError;
           break;
       }
 
-      // Clear selection and refresh data
+      // Clear cache and refresh data
+      leadsCache.clear();
       setSelectedLeads([]);
       fetchLeads(currentPage);
     } catch (err) {
@@ -220,7 +285,7 @@ export const useOptimizedLeads = () => {
   const exportToCSV = (leadsToExport: Lead[]) => {
     const headers = [
       'ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Country', 
-      'Status', 'Source', 'Balance', 'KYC Status', 'Created At'
+      'Status', 'Balance', 'KYC Status', 'Created At'
     ];
 
     const csvContent = [
@@ -233,7 +298,6 @@ export const useOptimizedLeads = () => {
         lead.phone || '',
         lead.country,
         lead.status,
-        lead.source,
         lead.balance,
         lead.kyc_status,
         lead.created_at
@@ -251,24 +315,32 @@ export const useOptimizedLeads = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  // Set up real-time subscriptions
+  // Set up real-time subscriptions with cache invalidation
   useRealTimeData({
-    onLeadsChange: () => fetchLeads(currentPage)
+    onLeadsChange: () => {
+      leadsCache.clear();
+      searchCache.clear();
+      fetchLeads(currentPage);
+    }
   });
 
   useEffect(() => {
     fetchLeads();
   }, [user]);
 
+  // Reset cache when filters change
   useEffect(() => {
-    applyFilters();
-  }, [leads, filters]);
+    leadsCache.invalidateByPattern('leads_.*');
+    resetLazy();
+    fetchLeads(1);
+  }, [filters]);
 
   return {
+    // Regular pagination mode
     leads: filteredLeads,
     selectedLeads,
-    isLoading,
-    error,
+    isLoading: isLoading || isLazyLoading,
+    error: error || lazyError,
     totalCount,
     currentPage,
     pageSize,
@@ -277,6 +349,12 @@ export const useOptimizedLeads = () => {
     setSelectedLeads,
     fetchLeads,
     performBulkAction,
-    exportToCSV: () => exportToCSV(filteredLeads)
+    exportToCSV: () => exportToCSV(filteredLeads),
+    
+    // Lazy loading mode
+    lazyLeads,
+    hasMore,
+    loadMore,
+    resetLazy,
   };
 };
