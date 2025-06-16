@@ -36,17 +36,10 @@ export const usePerformanceMonitor = () => {
   const collectMetrics = (): PerformanceMetrics => {
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
     
-    // Calculate page load time
     const pageLoadTime = navigation.loadEventEnd - navigation.fetchStart;
-    
-    // Get memory usage (if available)
     const memory = (performance as any).memory;
     const memoryUsage = memory ? memory.usedJSHeapSize / 1024 / 1024 : 0;
-
-    // Calculate render time (approximate)
     const renderTime = navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart;
-
-    // Simulate network latency measurement
     const networkLatency = navigation.responseEnd - navigation.requestStart;
 
     return {
@@ -54,7 +47,7 @@ export const usePerformanceMonitor = () => {
       renderTime,
       memoryUsage,
       networkLatency,
-      errorCount: 0, // Will be updated by error tracking
+      errorCount: 0,
       timestamp: new Date()
     };
   };
@@ -74,42 +67,6 @@ export const usePerformanceMonitor = () => {
       });
     }
 
-    if (metric.renderTime > thresholds.renderTime) {
-      newAlerts.push({
-        id: `alert-${Date.now()}-2`,
-        type: 'warning',
-        message: 'Render time is slower than expected',
-        metric: 'renderTime',
-        value: metric.renderTime,
-        threshold: thresholds.renderTime,
-        timestamp: new Date()
-      });
-    }
-
-    if (metric.memoryUsage > thresholds.memoryUsage) {
-      newAlerts.push({
-        id: `alert-${Date.now()}-3`,
-        type: 'error',
-        message: 'Memory usage is higher than expected',
-        metric: 'memoryUsage',
-        value: metric.memoryUsage,
-        threshold: thresholds.memoryUsage,
-        timestamp: new Date()
-      });
-    }
-
-    if (metric.networkLatency > thresholds.networkLatency) {
-      newAlerts.push({
-        id: `alert-${Date.now()}-4`,
-        type: 'warning',
-        message: 'Network latency is higher than expected',
-        metric: 'networkLatency',
-        value: metric.networkLatency,
-        threshold: thresholds.networkLatency,
-        timestamp: new Date()
-      });
-    }
-
     if (newAlerts.length > 0) {
       setAlerts(prev => [...prev, ...newAlerts]);
     }
@@ -118,22 +75,11 @@ export const usePerformanceMonitor = () => {
   const calculatePerformanceScore = (latestMetrics: PerformanceMetrics): number => {
     let score = 100;
     
-    // Deduct points based on performance issues
-    if (latestMetrics.pageLoadTime > thresholds.pageLoadTime) {
-      score -= 20;
-    }
-    if (latestMetrics.renderTime > thresholds.renderTime) {
-      score -= 15;
-    }
-    if (latestMetrics.memoryUsage > thresholds.memoryUsage) {
-      score -= 25;
-    }
-    if (latestMetrics.networkLatency > thresholds.networkLatency) {
-      score -= 20;
-    }
-    if (latestMetrics.errorCount > 0) {
-      score -= (latestMetrics.errorCount * 10);
-    }
+    if (latestMetrics.pageLoadTime > thresholds.pageLoadTime) score -= 20;
+    if (latestMetrics.renderTime > thresholds.renderTime) score -= 15;
+    if (latestMetrics.memoryUsage > thresholds.memoryUsage) score -= 25;
+    if (latestMetrics.networkLatency > thresholds.networkLatency) score -= 20;
+    if (latestMetrics.errorCount > 0) score -= (latestMetrics.errorCount * 10);
 
     return Math.max(0, score);
   };
@@ -150,12 +96,6 @@ export const usePerformanceMonitor = () => {
     if (latestMetrics.memoryUsage > thresholds.memoryUsage) {
       suggestions.push('Check for memory leaks and optimize large data structures');
     }
-    if (latestMetrics.networkLatency > thresholds.networkLatency) {
-      suggestions.push('Implement request caching and optimize API calls');
-    }
-    if (latestMetrics.errorCount > 0) {
-      suggestions.push('Fix JavaScript errors to improve application stability');
-    }
 
     return suggestions;
   };
@@ -163,17 +103,15 @@ export const usePerformanceMonitor = () => {
   const startMonitoring = () => {
     setIsMonitoring(true);
     
-    // Collect initial metrics
     const initialMetrics = collectMetrics();
     setMetrics([initialMetrics]);
     checkThresholds(initialMetrics);
 
-    // Set up periodic monitoring
     const interval = setInterval(() => {
       const newMetrics = collectMetrics();
-      setMetrics(prev => [...prev.slice(-19), newMetrics]); // Keep last 20 metrics
+      setMetrics(prev => [...prev.slice(-19), newMetrics]);
       checkThresholds(newMetrics);
-    }, 30000); // Every 30 seconds
+    }, 30000);
 
     return () => {
       clearInterval(interval);
@@ -181,15 +119,11 @@ export const usePerformanceMonitor = () => {
     };
   };
 
-  const clearAlerts = () => {
-    setAlerts([]);
-  };
-
+  const clearAlerts = () => setAlerts([]);
   const dismissAlert = (alertId: string) => {
     setAlerts(prev => prev.filter(alert => alert.id !== alertId));
   };
 
-  // Get latest metrics for score calculation
   const latestMetrics = metrics[metrics.length - 1] || {
     pageLoadTime: 0,
     renderTime: 0,
@@ -203,10 +137,8 @@ export const usePerformanceMonitor = () => {
   const optimizationSuggestions = generateOptimizationSuggestions(latestMetrics);
 
   useEffect(() => {
-    // Start monitoring when component mounts
     const cleanup = startMonitoring();
     
-    // Track JavaScript errors
     const errorHandler = (event: ErrorEvent) => {
       setMetrics(prev => {
         const latest = prev[prev.length - 1];
@@ -215,20 +147,9 @@ export const usePerformanceMonitor = () => {
         }
         return prev;
       });
-
-      setAlerts(prev => [...prev, {
-        id: `error-${Date.now()}`,
-        type: 'error',
-        message: `JavaScript Error: ${event.message}`,
-        metric: 'errorCount',
-        value: 1,
-        threshold: 0,
-        timestamp: new Date()
-      }]);
     };
 
     window.addEventListener('error', errorHandler);
-
     return () => {
       cleanup();
       window.removeEventListener('error', errorHandler);
