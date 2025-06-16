@@ -24,7 +24,16 @@ export const useWorkflowAutomation = () => {
         .order('priority', { ascending: false });
 
       if (error) throw error;
-      setWorkflowRules(data || []);
+      
+      // Cast the database types to our TypeScript types
+      const rules = (data || []).map(rule => ({
+        ...rule,
+        type: rule.type as WorkflowRule['type'],
+        conditions: rule.conditions as WorkflowRule['conditions'],
+        actions: rule.actions as WorkflowRule['actions']
+      }));
+      
+      setWorkflowRules(rules);
     } catch (err) {
       console.error('Error fetching workflow rules:', err);
       setError('Failed to fetch workflow rules');
@@ -40,8 +49,13 @@ export const useWorkflowAutomation = () => {
       const { data, error } = await supabase
         .from('workflow_rules')
         .insert([{
-          ...ruleData,
-          created_by: user.id
+          name: ruleData.name,
+          type: ruleData.type,
+          conditions: ruleData.conditions as any,
+          actions: ruleData.actions as any,
+          is_active: ruleData.is_active,
+          priority: ruleData.priority,
+          created_by: ruleData.created_by
         }])
         .select()
         .single();
@@ -57,9 +71,18 @@ export const useWorkflowAutomation = () => {
 
   const updateWorkflowRule = async (id: string, updates: Partial<WorkflowRule>) => {
     try {
+      const updateData: any = {};
+      
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.type !== undefined) updateData.type = updates.type;
+      if (updates.conditions !== undefined) updateData.conditions = updates.conditions;
+      if (updates.actions !== undefined) updateData.actions = updates.actions;
+      if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
+      if (updates.priority !== undefined) updateData.priority = updates.priority;
+
       const { error } = await supabase
         .from('workflow_rules')
-        .update(updates)
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
@@ -108,8 +131,16 @@ export const useWorkflowAutomation = () => {
       const { data, error } = await supabase
         .from('follow_up_reminders')
         .insert([{
-          ...reminderData,
-          created_by: user.id
+          lead_id: reminderData.lead_id,
+          assigned_to: reminderData.assigned_to,
+          reminder_type: reminderData.reminder_type,
+          title: reminderData.title,
+          description: reminderData.description,
+          due_date: reminderData.due_date,
+          status: reminderData.status,
+          priority: reminderData.priority,
+          created_by: reminderData.created_by,
+          completed_at: reminderData.completed_at
         }])
         .select()
         .single();
@@ -137,7 +168,16 @@ export const useWorkflowAutomation = () => {
         .order('due_date', { ascending: true });
 
       if (error) throw error;
-      setReminders(data || []);
+      
+      // Cast the database types to our TypeScript types
+      const reminders = (data || []).map(reminder => ({
+        ...reminder,
+        reminder_type: reminder.reminder_type as FollowUpReminder['reminder_type'],
+        status: reminder.status as FollowUpReminder['status'],
+        priority: reminder.priority as FollowUpReminder['priority']
+      }));
+      
+      setReminders(reminders);
     } catch (err) {
       console.error('Error fetching reminders:', err);
       setError('Failed to fetch reminders');
@@ -166,7 +206,12 @@ export const useWorkflowAutomation = () => {
     try {
       const { data, error } = await supabase
         .from('escalation_rules')
-        .insert([ruleData])
+        .insert([{
+          name: ruleData.name,
+          trigger_condition: ruleData.trigger_condition,
+          escalation_levels: ruleData.escalation_levels as any,
+          is_active: ruleData.is_active
+        }])
         .select()
         .single();
 
@@ -187,7 +232,14 @@ export const useWorkflowAutomation = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEscalationRules(data || []);
+      
+      // Cast the database types to our TypeScript types
+      const rules = (data || []).map(rule => ({
+        ...rule,
+        escalation_levels: rule.escalation_levels as EscalationRule['escalation_levels']
+      }));
+      
+      setEscalationRules(rules);
     } catch (err) {
       console.error('Error fetching escalation rules:', err);
       setError('Failed to fetch escalation rules');

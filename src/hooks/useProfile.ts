@@ -7,7 +7,7 @@ export interface UserProfile {
   id: string;
   first_name: string;
   last_name: string;
-  role: string;
+  role: 'admin' | 'agent';
   phone?: string;
   department?: string;
   status: string;
@@ -41,7 +41,7 @@ export const useProfile = () => {
 
       if (error) throw error;
       if (data) {
-        setProfile(data);
+        setProfile(data as UserProfile);
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -60,7 +60,7 @@ export const useProfile = () => {
         .order('first_name', { ascending: true });
 
       if (error) throw error;
-      setProfiles(data || []);
+      setProfiles((data || []) as UserProfile[]);
     } catch (err) {
       console.error('Error fetching profiles:', err);
       setError('Failed to fetch profiles');

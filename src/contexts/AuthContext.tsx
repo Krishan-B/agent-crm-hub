@@ -1,8 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContextType } from '../types/auth';
-import { useProfile } from '../hooks/useProfile';
 import { logSession } from '../utils/sessionLogger';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -10,8 +10,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<AuthContextType['profile']>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { profile, setProfile, fetchProfile } = useProfile();
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        // Ensure role is properly typed
+        const profileData = {
+          ...data,
+          role: data.role as 'admin' | 'agent'
+        };
+        setProfile(profileData);
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener
@@ -57,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile, setProfile]);
+  }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
