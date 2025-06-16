@@ -351,11 +351,6 @@ const OptimizedLeads: React.FC = () => {
                             <AppointmentDialog
                               leadId={lead.id}
                               leadName={`${lead.first_name} ${lead.last_name}`}
-                              trigger={
-                                <Button variant="ghost" size="sm">
-                                  <Calendar className="h-4 w-4" />
-                                </Button>
-                              }
                             />
                             <CommunicationDialog
                               leadId={lead.id}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,7 +11,7 @@ export interface Lead {
   phone?: string;
   country: string;
   status: 'active' | 'new' | 'contacted' | 'qualified' | 'converted' | 'inactive';
-  source: string;
+  source?: string; // Make source optional since it's not in the database
   assigned_agent_id?: string;
   kyc_status: string;
   balance: number;
@@ -97,11 +96,11 @@ export const useOptimizedLeads = () => {
         return;
       }
 
-      // Type assertion to ensure proper typing and add missing source field
+      // Type assertion to ensure proper typing without adding missing source field
       const typedLeads = (data || []).map(lead => ({
         ...lead,
         status: lead.status as Lead['status'],
-        source: lead.source || 'unknown' // Provide default value for source
+        // Don't add source since it's not in the database - make it optional in interface instead
       }));
 
       setLeads(typedLeads);
