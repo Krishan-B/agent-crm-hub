@@ -97,10 +97,11 @@ export const useOptimizedLeads = () => {
         return;
       }
 
-      // Type assertion to ensure proper typing
+      // Type assertion to ensure proper typing and add missing source field
       const typedLeads = (data || []).map(lead => ({
         ...lead,
-        status: lead.status as Lead['status'] // Ensure status matches the union type
+        status: lead.status as Lead['status'],
+        source: lead.source || 'unknown' // Provide default value for source
       }));
 
       setLeads(typedLeads);

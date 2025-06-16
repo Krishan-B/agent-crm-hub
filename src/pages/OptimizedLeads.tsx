@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -352,7 +351,7 @@ const OptimizedLeads: React.FC = () => {
                             <AppointmentDialog
                               leadId={lead.id}
                               leadName={`${lead.first_name} ${lead.last_name}`}
-                              children={
+                              trigger={
                                 <Button variant="ghost" size="sm">
                                   <Calendar className="h-4 w-4" />
                                 </Button>

@@ -115,6 +115,51 @@ export const usePerformanceMonitor = () => {
     }
   };
 
+  const calculatePerformanceScore = (latestMetrics: PerformanceMetrics): number => {
+    let score = 100;
+    
+    // Deduct points based on performance issues
+    if (latestMetrics.pageLoadTime > thresholds.pageLoadTime) {
+      score -= 20;
+    }
+    if (latestMetrics.renderTime > thresholds.renderTime) {
+      score -= 15;
+    }
+    if (latestMetrics.memoryUsage > thresholds.memoryUsage) {
+      score -= 25;
+    }
+    if (latestMetrics.networkLatency > thresholds.networkLatency) {
+      score -= 20;
+    }
+    if (latestMetrics.errorCount > 0) {
+      score -= (latestMetrics.errorCount * 10);
+    }
+
+    return Math.max(0, score);
+  };
+
+  const generateOptimizationSuggestions = (latestMetrics: PerformanceMetrics): string[] => {
+    const suggestions: string[] = [];
+
+    if (latestMetrics.pageLoadTime > thresholds.pageLoadTime) {
+      suggestions.push('Consider optimizing your bundle size and implementing code splitting');
+    }
+    if (latestMetrics.renderTime > thresholds.renderTime) {
+      suggestions.push('Use React.memo and useMemo to optimize component re-renders');
+    }
+    if (latestMetrics.memoryUsage > thresholds.memoryUsage) {
+      suggestions.push('Check for memory leaks and optimize large data structures');
+    }
+    if (latestMetrics.networkLatency > thresholds.networkLatency) {
+      suggestions.push('Implement request caching and optimize API calls');
+    }
+    if (latestMetrics.errorCount > 0) {
+      suggestions.push('Fix JavaScript errors to improve application stability');
+    }
+
+    return suggestions;
+  };
+
   const startMonitoring = () => {
     setIsMonitoring(true);
     
@@ -143,6 +188,19 @@ export const usePerformanceMonitor = () => {
   const dismissAlert = (alertId: string) => {
     setAlerts(prev => prev.filter(alert => alert.id !== alertId));
   };
+
+  // Get latest metrics for score calculation
+  const latestMetrics = metrics[metrics.length - 1] || {
+    pageLoadTime: 0,
+    renderTime: 0,
+    memoryUsage: 0,
+    networkLatency: 0,
+    errorCount: 0,
+    timestamp: new Date()
+  };
+
+  const performanceScore = calculatePerformanceScore(latestMetrics);
+  const optimizationSuggestions = generateOptimizationSuggestions(latestMetrics);
 
   useEffect(() => {
     // Start monitoring when component mounts
@@ -181,6 +239,8 @@ export const usePerformanceMonitor = () => {
     metrics,
     alerts,
     isMonitoring,
+    performanceScore,
+    optimizationSuggestions,
     clearAlerts,
     dismissAlert,
     startMonitoring
