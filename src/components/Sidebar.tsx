@@ -1,276 +1,211 @@
-
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
+  LayoutDashboard,
+  Users,
+  BarChart3,
+  MessageSquare,
+  Calendar,
+  Mail,
+  Settings,
+  ShieldCheck,
+  Bell,
+  ListChecks,
+  Workflow
+} from 'lucide-react';
+
 import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu"
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '../contexts/AuthContext';
-import { Home, Users, Settings, Calendar, Mail, LayoutDashboard, Bell, Shield, Database } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 
-const Sidebar: React.FC = () => {
-  const location = useLocation();
-  const { profile, logout, user } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [notifications] = useState<any[]>([]);
-
-  const getLinkClass = (path: string) => {
-    return cn(
-      "flex items-center space-x-2 text-sm font-medium",
-      location.pathname === path
-        ? "text-foreground"
-        : "text-muted-foreground hover:text-foreground"
-    );
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
-    navigate('/login');
-  };
+const SidebarComponent: React.FC = () => {
+  const { user, logout } = useAuth();
 
   return (
-    <div className="border-r flex flex-col h-full">
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="sm" className="md:hidden w-full justify-start pl-4">
-            <LayoutDashboard className="h-4 w-4 mr-2" />
-            Menu
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="pr-0">
-          <SheetHeader className="space-y-2 border-b pb-4">
-            <SheetTitle>Plexop CRM</SheetTitle>
-            <SheetDescription>
-              Manage your business from one central location.
-            </SheetDescription>
-          </SheetHeader>
-          <NavigationMenu>
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start pl-4">
-                    <Link to="/" className={getLinkClass('/')}>
-                      <LayoutDashboard className="h-4 w-4" />
-                      Dashboard
-                    </Link>
-                  </Button>
-                </SheetTrigger>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start pl-4">
-                    <Link to="/leads" className={getLinkClass('/leads')}>
-                      <Home className="h-4 w-4" />
-                      Leads
-                    </Link>
-                  </Button>
-                </SheetTrigger>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start pl-4">
-                    <Link to="/communications" className={getLinkClass('/communications')}>
-                      <Mail className="h-4 w-4" />
-                      Communications
-                    </Link>
-                  </Button>
-                </SheetTrigger>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start pl-4">
-                    <Link to="/calendar" className={getLinkClass('/calendar')}>
-                      <Calendar className="h-4 w-4" />
-                      Calendar
-                    </Link>
-                  </Button>
-                </SheetTrigger>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start pl-4">
-                    <Link to="/settings" className={getLinkClass('/settings')}>
-                      <Settings className="h-4 w-4" />
-                      Settings
-                    </Link>
-                  </Button>
-                </SheetTrigger>
-              </NavigationMenuItem>
-              {profile?.role === 'admin' && (
-                <>
-                  <NavigationMenuItem>
-                    <SheetTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-start pl-4">
-                        <Link to="/user-management" className={getLinkClass('/user-management')}>
-                          <Users className="h-4 w-4" />
-                          User Management
-                        </Link>
-                      </Button>
-                    </SheetTrigger>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <SheetTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-start pl-4">
-                        <Link to="/security" className={getLinkClass('/security')}>
-                          <Shield className="h-4 w-4" />
-                          Security
-                        </Link>
-                      </Button>
-                    </SheetTrigger>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <SheetTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-start pl-4">
-                        <Link to="/data-management" className={getLinkClass('/data-management')}>
-                          <Database className="h-4 w-4" />
-                          Data Management
-                        </Link>
-                      </Button>
-                    </SheetTrigger>
-                  </NavigationMenuItem>
-                </>
-              )}
-            </NavigationMenuList>
-          </NavigationMenu>
-        </SheetContent>
-      </Sheet>
-
-      <div className="flex-1 flex flex-col justify-between">
-        <div className="p-4">
-          <NavigationMenu className="hidden md:block">
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <Button variant="ghost" className="w-full justify-start pl-4">
-                  <Link to="/" className={getLinkClass('/')}>
+    <Sidebar>
+      <SidebarHeader>
+        <Link to="/" className="flex items-center space-x-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+            <AvatarFallback>CN</AvatarFallback>
+          </Avatar>
+          <span className="font-bold">Plexop CRM</span>
+        </Link>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/dashboard" className="flex items-center space-x-2">
                     <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
+                    <span>Dashboard</span>
                   </Link>
-                </Button>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Button variant="ghost" className="w-full justify-start pl-4">
-                  <Link to="/leads" className={getLinkClass('/leads')}>
-                    <Home className="h-4 w-4" />
-                    Leads
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/leads" className="flex items-center space-x-2">
+                    <Users className="h-4 w-4" />
+                    <span>Leads</span>
                   </Link>
-                </Button>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Button variant="ghost" className="w-full justify-start pl-4">
-                  <Link to="/communications" className={getLinkClass('/communications')}>
-                    <Mail className="h-4 w-4" />
-                    Communications
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/optimized-leads" className="flex items-center space-x-2">
+                    <Users className="h-4 w-4" />
+                    <span>Optimized Leads</span>
                   </Link>
-                </Button>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Button variant="ghost" className="w-full justify-start pl-4">
-                  <Link to="/calendar" className={getLinkClass('/calendar')}>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/analytics" className="flex items-center space-x-2">
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Analytics</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/communications" className="flex items-center space-x-2">
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Communications</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/calendar" className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4" />
-                    Calendar
+                    <span>Calendar</span>
                   </Link>
-                </Button>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Button variant="ghost" className="w-full justify-start pl-4">
-                  <Link to="/settings" className={getLinkClass('/settings')}>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/email-templates" className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4" />
+                    <span>Email Templates</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/workflow-automation" className="flex items-center space-x-2">
+                    <Workflow className="h-4 w-4" />
+                    <span>Workflow Automation</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/data-management" className="flex items-center space-x-2">
+                    <ListChecks className="h-4 w-4" />
+                    <span>Data Management</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/integrations" className="flex items-center space-x-2">
+                    <Bell className="h-4 w-4" />
+                    <span>Integrations</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/reports" className="flex items-center space-x-2">
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Reports</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/notifications" className="flex items-center space-x-2">
+                    <Bell className="h-4 w-4" />
+                    <span>Notifications</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/user-management" className="flex items-center space-x-2">
+                    <Users className="h-4 w-4" />
+                    <span>User Management</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/settings" className="flex items-center space-x-2">
                     <Settings className="h-4 w-4" />
-                    Settings
+                    <span>Settings</span>
                   </Link>
-                </Button>
-              </NavigationMenuItem>
-              {profile?.role === 'admin' && (
-                <>
-                  <NavigationMenuItem>
-                    <Button variant="ghost" className="w-full justify-start pl-4">
-                      <Link to="/user-management" className={getLinkClass('/user-management')}>
-                        <Users className="h-4 w-4" />
-                        User Management
-                      </Link>
-                    </Button>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <Button variant="ghost" className="w-full justify-start pl-4">
-                      <Link to="/security" className={getLinkClass('/security')}>
-                        <Shield className="h-4 w-4" />
-                        Security
-                      </Link>
-                    </Button>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <Button variant="ghost" className="w-full justify-start pl-4">
-                      <Link to="/data-management" className={getLinkClass('/data-management')}>
-                        <Database className="h-4 w-4" />
-                        Data Management
-                      </Link>
-                    </Button>
-                  </NavigationMenuItem>
-                </>
-              )}
-            </NavigationMenuList>
-          </NavigationMenu>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/security" className="flex items-center space-x-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Security</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <div className="flex items-center space-x-2">
+          <Avatar className="h-6 w-6">
+            {user?.user_metadata?.avatar_url ? (
+              <AvatarImage src={user.user_metadata.avatar_url as string} alt={user.email || "Avatar"} />
+            ) : (
+              <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+            )}
+          </Avatar>
+          <span className="text-sm font-medium">{user?.email}</span>
         </div>
-
-        <Separator />
-
-        <div className="p-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start pl-4">
-                <Avatar className="mr-2 h-8 w-8">
-                  <AvatarImage src={`https://avatar.vercel.sh/${user?.email}.png`} alt={profile?.first_name} />
-                  <AvatarFallback>{profile?.first_name?.charAt(0)}{profile?.last_name?.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col text-left">
-                  <span className="font-semibold">{profile?.first_name} {profile?.last_name}</span>
-                  <span className="text-muted-foreground text-sm">{profile?.role}</span>
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/settings')}>Settings</DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell className="h-4 w-4 mr-2" />
-                Notifications
-                {notifications.length > 0 && (
-                  <Badge variant="secondary" className="ml-auto">
-                    {notifications.length}
-                  </Badge>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-    </div>
+        <SidebarMenuButton onClick={logout} className="mt-2 w-full justify-center">
+          Logout
+        </SidebarMenuButton>
+      </SidebarFooter>
+    </Sidebar>
   );
 };
 
-export default Sidebar;
+export default SidebarComponent;
