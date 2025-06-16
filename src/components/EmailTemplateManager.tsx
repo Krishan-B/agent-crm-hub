@@ -18,7 +18,7 @@ const EmailTemplateManager: React.FC = () => {
   const [type, setType] = useState<'email' | 'sms' | 'call' | 'note'>('email');
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
-  const { templates, fetchTemplates } = useCommunications();
+  const { templates, fetchTemplates, createTemplate, updateTemplate, deleteTemplate } = useCommunications();
   const { toast } = useToast();
 
   const resetForm = () => {
@@ -31,12 +31,28 @@ const EmailTemplateManager: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      // Implementation would depend on having a createTemplate function
-      // For now, we'll show a success message
-      toast({
-        title: "Template Saved",
-        description: `Template "${name}" has been saved successfully.`,
-      });
+      const templateData = {
+        name,
+        type,
+        subject: type === 'email' ? subject : undefined,
+        content,
+        is_active: true,
+        variables: ['first_name', 'last_name', 'full_name'] // Default variables
+      };
+
+      if (editingTemplate) {
+        await updateTemplate(editingTemplate.id, templateData);
+        toast({
+          title: "Template Updated",
+          description: `Template "${name}" has been updated successfully.`,
+        });
+      } else {
+        await createTemplate(templateData);
+        toast({
+          title: "Template Created",
+          description: `Template "${name}" has been created successfully.`,
+        });
+      }
       
       setOpen(false);
       resetForm();
@@ -62,7 +78,7 @@ const EmailTemplateManager: React.FC = () => {
 
   const handleDelete = async (templateId: string) => {
     try {
-      // Implementation would depend on having a deleteTemplate function
+      await deleteTemplate(templateId);
       toast({
         title: "Template Deleted",
         description: "Template has been deleted successfully.",

@@ -115,6 +115,76 @@ export const useCommunications = (leadId?: string) => {
     }
   };
 
+  const createTemplate = async (templateData: Omit<CommunicationTemplate, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('communication_templates')
+        .insert([{
+          ...templateData,
+          created_by: user.id
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating template:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (err) {
+      console.error('Error creating template:', err);
+      throw err;
+    }
+  };
+
+  const updateTemplate = async (id: string, templateData: Partial<CommunicationTemplate>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('communication_templates')
+        .update({
+          ...templateData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating template:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (err) {
+      console.error('Error updating template:', err);
+      throw err;
+    }
+  };
+
+  const deleteTemplate = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('communication_templates')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting template:', error);
+        throw error;
+      }
+    } catch (err) {
+      console.error('Error deleting template:', err);
+      throw err;
+    }
+  };
+
   // Set up real-time subscriptions
   useRealTimeData({
     onCommunicationsChange: fetchCommunications
@@ -184,7 +254,11 @@ export const useCommunications = (leadId?: string) => {
     isLoading, 
     error, 
     fetchCommunications, 
+    fetchTemplates,
     sendCommunication, 
-    updateCommunicationStatus 
+    updateCommunicationStatus,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate
   };
 };
