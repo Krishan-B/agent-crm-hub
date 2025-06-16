@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { leadSchema } from '../lib/validation';
 
@@ -7,6 +6,7 @@ interface ValidationError {
   field: string;
   error: string;
   value: any;
+  data: any; // Add the missing data property
 }
 
 interface ValidationResult {
@@ -73,7 +73,8 @@ export const useDataValidation = () => {
         row: rowNumber,
         field: 'first_name',
         error: 'First name is required',
-        value: record.first_name
+        value: record.first_name,
+        data: record
       });
     }
 
@@ -82,7 +83,8 @@ export const useDataValidation = () => {
         row: rowNumber,
         field: 'last_name',
         error: 'Last name is required',
-        value: record.last_name
+        value: record.last_name,
+        data: record
       });
     }
 
@@ -91,14 +93,16 @@ export const useDataValidation = () => {
         row: rowNumber,
         field: 'email',
         error: 'Email is required',
-        value: record.email
+        value: record.email,
+        data: record
       });
     } else if (!isValidEmail(record.email)) {
       errors.push({
         row: rowNumber,
         field: 'email',
         error: 'Invalid email format',
-        value: record.email
+        value: record.email,
+        data: record
       });
     }
 
@@ -107,7 +111,8 @@ export const useDataValidation = () => {
         row: rowNumber,
         field: 'country',
         error: 'Country is required',
-        value: record.country
+        value: record.country,
+        data: record
       });
     }
 
@@ -117,7 +122,8 @@ export const useDataValidation = () => {
         row: rowNumber,
         field: 'phone',
         error: 'Invalid phone format',
-        value: record.phone
+        value: record.phone,
+        data: record
       });
     }
 
@@ -126,7 +132,8 @@ export const useDataValidation = () => {
         row: rowNumber,
         field: 'balance',
         error: 'Balance must be a valid number',
-        value: record.balance
+        value: record.balance,
+        data: record
       });
     }
 
@@ -135,7 +142,8 @@ export const useDataValidation = () => {
         row: rowNumber,
         field: 'bonus_amount',
         error: 'Bonus amount must be a valid number',
-        value: record.bonus_amount
+        value: record.bonus_amount,
+        data: record
       });
     }
 
@@ -146,7 +154,8 @@ export const useDataValidation = () => {
         row: rowNumber,
         field: 'status',
         error: `Status must be one of: ${validStatuses.join(', ')}`,
-        value: record.status
+        value: record.status,
+        data: record
       });
     }
 
@@ -157,7 +166,8 @@ export const useDataValidation = () => {
         row: rowNumber,
         field: 'kyc_status',
         error: `KYC status must be one of: ${validKycStatuses.join(', ')}`,
-        value: record.kyc_status
+        value: record.kyc_status,
+        data: record
       });
     }
 

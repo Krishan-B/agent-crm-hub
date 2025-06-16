@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,12 +5,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, DateRange } from '@/components/ui/calendar';
+import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Archive, Trash2, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useDataArchiving } from '../../hooks/useDataArchiving';
+import type { DateRange } from 'react-day-picker';
 
 export const DataArchiving: React.FC = () => {
   const [archiveRule, setArchiveRule] = useState<'age' | 'status' | 'manual'>('age');
