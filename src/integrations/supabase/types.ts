@@ -431,6 +431,86 @@ export type Database = {
         }
         Relationships: []
       }
+      escalation_rules: {
+        Row: {
+          created_at: string
+          escalation_levels: Json
+          id: string
+          is_active: boolean
+          name: string
+          trigger_condition: string
+        }
+        Insert: {
+          created_at?: string
+          escalation_levels?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+          trigger_condition: string
+        }
+        Update: {
+          created_at?: string
+          escalation_levels?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          trigger_condition?: string
+        }
+        Relationships: []
+      }
+      follow_up_reminders: {
+        Row: {
+          assigned_to: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string
+          id: string
+          lead_id: string
+          priority: string
+          reminder_type: string
+          status: string
+          title: string
+        }
+        Insert: {
+          assigned_to: string
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date: string
+          id?: string
+          lead_id: string
+          priority?: string
+          reminder_type: string
+          status?: string
+          title: string
+        }
+        Update: {
+          assigned_to?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          lead_id?: string
+          priority?: string
+          reminder_type?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_reminders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kyc_documents: {
         Row: {
           created_at: string
@@ -1166,6 +1246,93 @@ export type Database = {
           timeout?: number
           updated_at?: string
           url?: string
+        }
+        Relationships: []
+      }
+      workflow_executions: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          lead_id: string
+          result_data: Json | null
+          rule_id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id: string
+          result_data?: Json | null
+          rule_id: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string
+          result_data?: Json | null
+          rule_id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_executions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_executions_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_rules: {
+        Row: {
+          actions: Json
+          conditions: Json
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          name: string
+          priority: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          conditions?: Json
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          name: string
+          priority?: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          conditions?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          priority?: number
+          type?: string
+          updated_at?: string
         }
         Relationships: []
       }

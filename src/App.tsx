@@ -1,6 +1,8 @@
-import React, { useContext } from 'react';
+
+import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { AuthContext, AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import Index from './pages/Index';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -22,7 +24,7 @@ import NotFound from './pages/NotFound';
 import WorkflowAutomation from './pages/WorkflowAutomation';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   if (!user) {
     return <Navigate to="/login" />;
   }

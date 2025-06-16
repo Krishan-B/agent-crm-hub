@@ -11,6 +11,7 @@ import { Plus, Edit, Trash2, Users, Settings } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useWorkflowAutomation } from '../../hooks/useWorkflowAutomation';
 import { useProfile } from '../../hooks/useProfile';
+import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { WorkflowRule, WorkflowCondition, WorkflowAction } from '../../types/workflow';
 
@@ -28,20 +29,28 @@ const AutomatedLeadAssignment: React.FC = () => {
 
   const { workflowRules, createWorkflowRule, updateWorkflowRule, deleteWorkflowRule, isLoading } = useWorkflowAutomation();
   const { profiles } = useProfile();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const assignmentRules = workflowRules.filter(rule => rule.type === 'lead_assignment');
 
   const handleSaveRule = async () => {
+    if (!user) return;
+    
     try {
+      const ruleData = {
+        ...newRule,
+        created_by: user.id
+      };
+      
       if (editingRule) {
-        await updateWorkflowRule(editingRule.id, newRule);
+        await updateWorkflowRule(editingRule.id, ruleData);
         toast({
           title: "Rule Updated",
           description: "Assignment rule has been updated successfully.",
         });
       } else {
-        await createWorkflowRule(newRule);
+        await createWorkflowRule(ruleData);
         toast({
           title: "Rule Created",
           description: "New assignment rule has been created successfully.",
@@ -134,7 +143,7 @@ const AutomatedLeadAssignment: React.FC = () => {
     setEditingRule(rule);
     setNewRule({
       name: rule.name,
-      type: rule.type,
+      type: 'lead_assignment',
       conditions: rule.conditions,
       actions: rule.actions,
       is_active: rule.is_active,

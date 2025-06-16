@@ -1,12 +1,37 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { UserProfile } from '../types/auth';
+import { useAuth } from '../contexts/AuthContext';
+
+export interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  phone?: string;
+  department?: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export const useProfile = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile>({
+    id: '',
+    first_name: '',
+    last_name: '',
+    role: 'agent',
+    status: 'active'
+  });
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const fetchProfile = async (userId: string) => {
+    if (!userId) return;
+    
+    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -14,23 +39,50 @@ export const useProfile = () => {
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
+      if (error) throw error;
+      if (data) {
+        setProfile(data);
       }
-
-      // Type assertion to ensure compatibility with our UserProfile interface
-      const typedProfile: UserProfile = {
-        ...data,
-        role: data.role as 'admin' | 'agent',
-        status: data.status as 'active' | 'inactive'
-      };
-
-      setProfile(typedProfile);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setError('Failed to fetch profile');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return { profile, setProfile, fetchProfile };
+  const fetchAllProfiles = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('first_name', { ascending: true });
+
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (err) {
+      console.error('Error fetching profiles:', err);
+      setError('Failed to fetch profiles');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfile(user.id);
+      fetchAllProfiles();
+    }
+  }, [user?.id]);
+
+  return {
+    profile,
+    profiles,
+    setProfile,
+    fetchProfile,
+    fetchAllProfiles,
+    isLoading,
+    error
+  };
 };

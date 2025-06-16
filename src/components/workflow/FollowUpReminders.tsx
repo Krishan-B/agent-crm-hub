@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { useWorkflowAutomation } from '../../hooks/useWorkflowAutomation';
 import { useLeads } from '../../hooks/useLeads';
 import { useProfile } from '../../hooks/useProfile';
+import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -33,14 +34,18 @@ const FollowUpReminders: React.FC = () => {
   const { reminders, createFollowUpReminder, completeReminder, isLoading } = useWorkflowAutomation();
   const { leads } = useLeads();
   const { profiles } = useProfile();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const handleCreateReminder = async () => {
+    if (!user) return;
+    
     try {
       await createFollowUpReminder({
         ...newReminder,
         due_date: newReminder.due_date.toISOString(),
-        status: 'pending'
+        status: 'pending',
+        created_by: user.id
       });
       
       toast({
