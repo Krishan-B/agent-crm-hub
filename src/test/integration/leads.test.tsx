@@ -1,11 +1,12 @@
 
 import React from 'react';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { describe, test, expect, vi } from 'vitest';
 import { render } from '../testUtils';
 import OptimizedLeads from '../../pages/OptimizedLeads';
 
 // Mock the hooks
-jest.mock('../../hooks/useOptimizedLeads', () => ({
+vi.mock('../../hooks/useOptimizedLeads', () => ({
   useOptimizedLeads: () => ({
     leads: [
       {
@@ -23,8 +24,8 @@ jest.mock('../../hooks/useOptimizedLeads', () => ({
     error: null,
     pagination: { page: 1, pageSize: 50, total: 1 },
     filters: {},
-    setFilters: jest.fn(),
-    refetch: jest.fn()
+    setFilters: vi.fn(),
+    refetch: vi.fn()
   })
 }));
 
@@ -40,10 +41,10 @@ describe('Leads Integration Tests', () => {
   });
 
   test('filters work correctly', async () => {
-    const mockSetFilters = jest.fn();
+    const mockSetFilters = vi.fn();
     
     // Mock the hook with setFilters function
-    jest.mock('../../hooks/useOptimizedLeads', () => ({
+    vi.mock('../../hooks/useOptimizedLeads', () => ({
       useOptimizedLeads: () => ({
         leads: [],
         isLoading: false,
@@ -51,7 +52,7 @@ describe('Leads Integration Tests', () => {
         pagination: { page: 1, pageSize: 50, total: 0 },
         filters: {},
         setFilters: mockSetFilters,
-        refetch: jest.fn()
+        refetch: vi.fn()
       })
     }));
 

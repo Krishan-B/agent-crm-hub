@@ -1,4 +1,5 @@
 
+import { describe, test, expect } from 'vitest';
 import { validateSingleLead } from '../../utils/leadValidator';
 
 describe('Lead Validator', () => {
