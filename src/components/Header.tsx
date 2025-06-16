@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { Bell, Search, User } from 'lucide-react';
+import { Search, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import NotificationCenter from './NotificationCenter';
 
 const Header: React.FC = () => {
   const { user, profile, logout } = useAuth();
@@ -23,9 +24,7 @@ const Header: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm">
-            <Bell className="h-4 w-4" />
-          </Button>
+          <NotificationCenter />
           
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">

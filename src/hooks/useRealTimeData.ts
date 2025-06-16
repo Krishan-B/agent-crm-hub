@@ -11,6 +11,7 @@ interface UseRealTimeDataProps {
   onProfilesChange?: () => void;
   onCommunicationsChange?: () => void;
   onAppointmentsChange?: () => void;
+  onNotificationsChange?: () => void;
 }
 
 export const useRealTimeData = ({
@@ -20,7 +21,8 @@ export const useRealTimeData = ({
   onKycDocumentsChange,
   onProfilesChange,
   onCommunicationsChange,
-  onAppointmentsChange
+  onAppointmentsChange,
+  onNotificationsChange
 }: UseRealTimeDataProps) => {
   const { user } = useAuth();
 
@@ -148,11 +150,29 @@ export const useRealTimeData = ({
       subscriptions.push(appointmentsSubscription);
     }
 
+    // Subscribe to notifications changes
+    if (onNotificationsChange) {
+      const notificationsSubscription = supabase
+        .channel('notifications-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          console.log('Notifications data changed');
+          onNotificationsChange();
+        })
+        .subscribe();
+      
+      subscriptions.push(notificationsSubscription);
+    }
+
     // Cleanup function
     return () => {
       subscriptions.forEach(subscription => {
         supabase.removeChannel(subscription);
       });
     };
-  }, [user, onLeadsChange, onActivitiesChange, onTransactionsChange, onKycDocumentsChange, onProfilesChange, onCommunicationsChange, onAppointmentsChange]);
+  }, [user, onLeadsChange, onActivitiesChange, onTransactionsChange, onKycDocumentsChange, onProfilesChange, onCommunicationsChange, onAppointmentsChange, onNotificationsChange]);
 };

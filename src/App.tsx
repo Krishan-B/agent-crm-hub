@@ -12,6 +12,7 @@ import LeadDetail from "./pages/LeadDetail";
 import Calendar from "./pages/Calendar";
 import Communications from "./pages/Communications";
 import EmailTemplates from "./pages/EmailTemplates";
+import Notifications from "./pages/Notifications";
 import UserManagement from "./pages/UserManagement";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -64,6 +65,11 @@ const App = () => (
             <Route path="/email-templates" element={
               <ProtectedRoute>
                 <EmailTemplates />
+              </ProtectedRoute>
+            } />
+            <Route path="/notifications" element={
+              <ProtectedRoute>
+                <Notifications />
               </ProtectedRoute>
             } />
             <Route path="/users" element={
