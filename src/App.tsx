@@ -13,6 +13,7 @@ import Communications from './pages/Communications';
 import Calendar from './pages/Calendar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Security from './pages/Security';
+import DataManagement from './pages/DataManagement';
 
 function App() {
   const queryClient = new QueryClient({
@@ -81,6 +82,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole="admin">
                     <Security />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/data-management" 
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <DataManagement />
                   </ProtectedRoute>
                 } 
               />

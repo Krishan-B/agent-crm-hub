@@ -18,31 +18,13 @@ import {
   NavigationMenuList,
 } from "@/components/ui/navigation-menu"
 import { useAuth } from '../contexts/AuthContext';
-import { Home, Users, Settings, Calendar, Mail, LayoutDashboard, Bell, Shield } from 'lucide-react';
+import { Home, Users, Settings, Calendar, Mail, LayoutDashboard, Bell, Shield, Database } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-
-interface SidebarMenuItemProps {
-  children: React.ReactNode;
-}
-
-const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({ children }) => (
-  <li>{children}</li>
-);
-
-interface SidebarMenuButtonProps {
-  children: React.ReactNode;
-}
-
-const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = ({ children }) => (
-  <Button variant="ghost" className="w-full justify-start pl-4 hover:bg-accent hover:text-accent-foreground">
-    {children}
-  </Button>
-);
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -159,6 +141,16 @@ const Sidebar: React.FC = () => {
                       </Button>
                     </SheetTrigger>
                   </NavigationMenuItem>
+                  <NavigationMenuItem>
+                    <SheetTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-start pl-4">
+                        <Link to="/data-management" className={getLinkClass('/data-management')}>
+                          <Database className="h-4 w-4" />
+                          Data Management
+                        </Link>
+                      </Button>
+                    </SheetTrigger>
+                  </NavigationMenuItem>
                 </>
               )}
             </NavigationMenuList>
@@ -212,22 +204,30 @@ const Sidebar: React.FC = () => {
               </NavigationMenuItem>
               {profile?.role === 'admin' && (
                 <>
-                  <SidebarMenuItem>
+                  <NavigationMenuItem>
                     <Button variant="ghost" className="w-full justify-start pl-4">
                       <Link to="/user-management" className={getLinkClass('/user-management')}>
                         <Users className="h-4 w-4" />
                         User Management
                       </Link>
                     </Button>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  </NavigationMenuItem>
+                  <NavigationMenuItem>
                     <Button variant="ghost" className="w-full justify-start pl-4">
                       <Link to="/security" className={getLinkClass('/security')}>
                         <Shield className="h-4 w-4" />
                         Security
                       </Link>
                     </Button>
-                  </SidebarMenuItem>
+                  </NavigationMenuItem>
+                  <NavigationMenuItem>
+                    <Button variant="ghost" className="w-full justify-start pl-4">
+                      <Link to="/data-management" className={getLinkClass('/data-management')}>
+                        <Database className="h-4 w-4" />
+                        Data Management
+                      </Link>
+                    </Button>
+                  </NavigationMenuItem>
                 </>
               )}
             </NavigationMenuList>
