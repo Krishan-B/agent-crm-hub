@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -14,28 +15,16 @@ import { Separator } from "@/components/ui/separator"
 import {
   NavigationMenu,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import { useAuth } from '../contexts/AuthContext';
-import { Home, Users, Settings, Calendar, Mail, LayoutDashboard, Plus, FileText } from 'lucide-react';
+import { Home, Users, Settings, Calendar, Mail, LayoutDashboard, Bell, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ModeToggle } from './ModeToggle';
 import { useToast } from '@/hooks/use-toast';
-import { useRealTimeData } from '@/hooks/useRealTimeData';
-import { Notification } from '@/types/notification';
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from '@/components/ui/badge';
-import { formatDistanceToNow } from 'date-fns';
-import { toast } from "@/hooks/use-toast"
-import { SocketContext } from '../contexts/SocketContext';
-import { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell } from 'lucide-react';
-import { Shield } from 'lucide-react'; // Add this to existing imports
+import { useState, useEffect } from 'react';
 
 interface SidebarMenuItemProps {
   children: React.ReactNode;
@@ -60,8 +49,7 @@ const Sidebar: React.FC = () => {
   const { profile, logout, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const { socket } = useContext(SocketContext);
+  const [notifications] = useState<any[]>([]);
 
   const getLinkClass = (path: string) => {
     return cn(
@@ -80,29 +68,6 @@ const Sidebar: React.FC = () => {
     });
     navigate('/login');
   };
-
-  // Real-time notifications
-  useRealTimeData({
-    onNotificationsChange: (newNotifications) => {
-      setNotifications(newNotifications);
-    }
-  });
-
-  useEffect(() => {
-    if (socket) {
-      socket.on('notification', (notification: Notification) => {
-        setNotifications(prevNotifications => [notification, ...prevNotifications]);
-        toast({
-          title: notification.title,
-          description: notification.message,
-        });
-      });
-
-      return () => {
-        socket.off('notification');
-      };
-    }
-  }, [socket, toast]);
 
   return (
     <div className="border-r flex flex-col h-full">
@@ -124,74 +89,74 @@ const Sidebar: React.FC = () => {
             <NavigationMenuList>
               <NavigationMenuItem>
                 <SheetTrigger asChild>
-                  <SidebarMenuButton asChild>
+                  <Button variant="ghost" className="w-full justify-start pl-4">
                     <Link to="/" className={getLinkClass('/')}>
                       <LayoutDashboard className="h-4 w-4" />
                       Dashboard
                     </Link>
-                  </SidebarMenuButton>
+                  </Button>
                 </SheetTrigger>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <SheetTrigger asChild>
-                  <SidebarMenuButton asChild>
+                  <Button variant="ghost" className="w-full justify-start pl-4">
                     <Link to="/leads" className={getLinkClass('/leads')}>
                       <Home className="h-4 w-4" />
                       Leads
                     </Link>
-                  </SidebarMenuButton>
+                  </Button>
                 </SheetTrigger>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <SheetTrigger asChild>
-                  <SidebarMenuButton asChild>
+                  <Button variant="ghost" className="w-full justify-start pl-4">
                     <Link to="/communications" className={getLinkClass('/communications')}>
                       <Mail className="h-4 w-4" />
                       Communications
                     </Link>
-                  </SidebarMenuButton>
+                  </Button>
                 </SheetTrigger>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <SheetTrigger asChild>
-                  <SidebarMenuButton asChild>
+                  <Button variant="ghost" className="w-full justify-start pl-4">
                     <Link to="/calendar" className={getLinkClass('/calendar')}>
                       <Calendar className="h-4 w-4" />
                       Calendar
                     </Link>
-                  </SidebarMenuButton>
+                  </Button>
                 </SheetTrigger>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <SheetTrigger asChild>
-                  <SidebarMenuButton asChild>
+                  <Button variant="ghost" className="w-full justify-start pl-4">
                     <Link to="/settings" className={getLinkClass('/settings')}>
                       <Settings className="h-4 w-4" />
                       Settings
                     </Link>
-                  </SidebarMenuButton>
+                  </Button>
                 </SheetTrigger>
               </NavigationMenuItem>
               {profile?.role === 'admin' && (
                 <>
                   <NavigationMenuItem>
                     <SheetTrigger asChild>
-                      <SidebarMenuButton asChild>
+                      <Button variant="ghost" className="w-full justify-start pl-4">
                         <Link to="/user-management" className={getLinkClass('/user-management')}>
                           <Users className="h-4 w-4" />
                           User Management
                         </Link>
-                      </SidebarMenuButton>
+                      </Button>
                     </SheetTrigger>
                   </NavigationMenuItem>
                   <NavigationMenuItem>
                     <SheetTrigger asChild>
-                      <SidebarMenuButton asChild>
+                      <Button variant="ghost" className="w-full justify-start pl-4">
                         <Link to="/security" className={getLinkClass('/security')}>
                           <Shield className="h-4 w-4" />
                           Security
                         </Link>
-                      </SidebarMenuButton>
+                      </Button>
                     </SheetTrigger>
                   </NavigationMenuItem>
                 </>
@@ -206,62 +171,62 @@ const Sidebar: React.FC = () => {
           <NavigationMenu className="hidden md:block">
             <NavigationMenuList>
               <NavigationMenuItem>
-                <SidebarMenuButton asChild>
+                <Button variant="ghost" className="w-full justify-start pl-4">
                   <Link to="/" className={getLinkClass('/')}>
                     <LayoutDashboard className="h-4 w-4" />
                     Dashboard
                   </Link>
-                </SidebarMenuButton>
+                </Button>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <SidebarMenuButton asChild>
+                <Button variant="ghost" className="w-full justify-start pl-4">
                   <Link to="/leads" className={getLinkClass('/leads')}>
                     <Home className="h-4 w-4" />
                     Leads
                   </Link>
-                </SidebarMenuButton>
+                </Button>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <SidebarMenuButton asChild>
+                <Button variant="ghost" className="w-full justify-start pl-4">
                   <Link to="/communications" className={getLinkClass('/communications')}>
                     <Mail className="h-4 w-4" />
                     Communications
                   </Link>
-                </SidebarMenuButton>
+                </Button>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <SidebarMenuButton asChild>
+                <Button variant="ghost" className="w-full justify-start pl-4">
                   <Link to="/calendar" className={getLinkClass('/calendar')}>
                     <Calendar className="h-4 w-4" />
                     Calendar
                   </Link>
-                </SidebarMenuButton>
+                </Button>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <SidebarMenuButton asChild>
+                <Button variant="ghost" className="w-full justify-start pl-4">
                   <Link to="/settings" className={getLinkClass('/settings')}>
                     <Settings className="h-4 w-4" />
                     Settings
                   </Link>
-                </SidebarMenuButton>
+                </Button>
               </NavigationMenuItem>
               {profile?.role === 'admin' && (
                 <>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
+                    <Button variant="ghost" className="w-full justify-start pl-4">
                       <Link to="/user-management" className={getLinkClass('/user-management')}>
                         <Users className="h-4 w-4" />
                         User Management
                       </Link>
-                    </SidebarMenuButton>
+                    </Button>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
+                    <Button variant="ghost" className="w-full justify-start pl-4">
                       <Link to="/security" className={getLinkClass('/security')}>
                         <Shield className="h-4 w-4" />
                         Security
                       </Link>
-                    </SidebarMenuButton>
+                    </Button>
                   </SidebarMenuItem>
                 </>
               )}

@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -10,7 +11,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Leads from './pages/Leads';
 import Communications from './pages/Communications';
 import Calendar from './pages/Calendar';
-import SMS from './pages/SMS';
 import ProtectedRoute from './components/ProtectedRoute';
 import Security from './pages/Security';
 
@@ -73,14 +73,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Calendar />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/sms"
-                element={
-                  <ProtectedRoute>
-                    <SMS />
                   </ProtectedRoute>
                 }
               />
