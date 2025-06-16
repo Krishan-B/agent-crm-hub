@@ -7,28 +7,50 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ErrorMessage } from '@/components/ui/error-message';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { useRetry } from '@/hooks/useRetry';
+import { loginSchema } from '@/lib/validation';
 import { sanitizeInput } from '@/lib/sanitize';
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, user, isLoading } = useAuth();
+  const { retry, isRetrying, attemptCount } = useRetry({ maxAttempts: 3, delay: 1000 });
+
+  const {
+    values,
+    errors,
+    touched,
+    isValid,
+    setValue,
+    setTouched,
+    handleSubmit
+  } = useFormValidation(loginSchema, {
+    email: '',
+    password: ''
+  });
 
   if (user) {
     return <Navigate to="/" replace />;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (formValues: typeof values) => {
     setError('');
     
-    const sanitizedEmail = sanitizeInput(email);
-    const sanitizedPassword = sanitizeInput(password);
+    try {
+      const sanitizedEmail = sanitizeInput(formValues.email);
+      const sanitizedPassword = sanitizeInput(formValues.password);
 
-    const result = await login(sanitizedEmail, sanitizedPassword);
-    if (result.error) {
-      setError(result.error);
+      await retry(async () => {
+        const result = await login(sanitizedEmail, sanitizedPassword);
+        if (result.error) {
+          throw new Error(result.error);
+        }
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
     }
   };
 
@@ -40,19 +62,23 @@ const Login: React.FC = () => {
           <CardDescription className="mobile-text">Sign in to access your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="mobile-form-spacing">
+          <form onSubmit={handleSubmit(onSubmit)} className="mobile-form-spacing">
             <div className="space-y-2">
               <Label htmlFor="email" className="mobile-text">Email</Label>
               <Input
                 id="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={values.email}
+                onChange={(e) => setValue('email', e.target.value)}
+                onBlur={() => setTouched('email')}
                 required
                 placeholder="Enter your email"
-                className="touch-target text-base" // Prevent zoom on iOS
+                className="touch-target text-base"
                 autoComplete="email"
               />
+              {touched.email && errors.email && (
+                <ErrorMessage message={errors.email.message} type="error" />
+              )}
             </div>
             
             <div className="space-y-2">
@@ -60,28 +86,41 @@ const Login: React.FC = () => {
               <Input
                 id="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={values.password}
+                onChange={(e) => setValue('password', e.target.value)}
+                onBlur={() => setTouched('password')}
                 required
                 placeholder="Enter your password"
-                className="touch-target text-base" // Prevent zoom on iOS
+                className="touch-target text-base"
                 autoComplete="current-password"
               />
+              {touched.password && errors.password && (
+                <ErrorMessage message={errors.password.message} type="error" />
+              )}
             </div>
             
             {error && (
               <Alert variant="destructive">
-                <AlertDescription className="mobile-text">{error}</AlertDescription>
+                <AlertDescription className="mobile-text">
+                  {error}
+                  {isRetrying && attemptCount > 1 && (
+                    <span className="block mt-1 text-xs">
+                      Retrying... (Attempt {attemptCount}/3)
+                    </span>
+                  )}
+                </AlertDescription>
               </Alert>
             )}
             
             <Button 
               type="submit" 
               className="w-full touch-target" 
-              disabled={isLoading}
+              disabled={isLoading || isRetrying || !isValid}
               size="lg"
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading || isRetrying ? (
+                isRetrying ? `Retrying... (${attemptCount}/3)` : 'Signing in...'
+              ) : 'Sign In'}
             </Button>
           </form>
         </CardContent>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,9 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ErrorMessage } from '@/components/ui/error-message';
 import { Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { useRetry } from '@/hooks/useRetry';
+import { signupSchema } from '@/lib/validation';
 import { sanitizeInput } from '@/lib/sanitize';
+import { z } from 'zod';
 
 interface AddUserDialogProps {
   onUserAdded: () => void;
@@ -16,47 +20,63 @@ interface AddUserDialogProps {
 
 const AddUserDialog: React.FC<AddUserDialogProps> = ({ onUserAdded }) => {
   const [open, setOpen] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'agent'>('agent');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
+  const { retry, isRetrying, attemptCount } = useRetry({ maxAttempts: 3, delay: 1000 });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const formSchema = signupSchema.extend({
+    role: z.enum(['admin', 'agent'])
+  });
+
+  const {
+    values,
+    errors,
+    touched,
+    isValid,
+    setValue,
+    setTouched,
+    reset,
+    handleSubmit
+  } = useFormValidation(formSchema, {
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'agent' as 'admin' | 'agent'
+  });
+
+  const onSubmit = async (formValues: typeof values) => {
     setError('');
-    setIsLoading(true);
 
-    const sanitizedFirstName = sanitizeInput(firstName);
-    const sanitizedLastName = sanitizeInput(lastName);
-    const sanitizedEmail = sanitizeInput(email);
-    const sanitizedPassword = sanitizeInput(password);
+    try {
+      const sanitizedFirstName = sanitizeInput(formValues.firstName);
+      const sanitizedLastName = sanitizeInput(formValues.lastName);
+      const sanitizedEmail = sanitizeInput(formValues.email);
+      const sanitizedPassword = sanitizeInput(formValues.password);
 
-    if (!sanitizedFirstName.trim() || !sanitizedLastName.trim() || !sanitizedEmail.trim() || !sanitizedPassword.trim()) {
-      setError('All fields are required');
-      setIsLoading(false);
-      return;
-    }
+      await retry(async () => {
+        const result = await signUp(
+          sanitizedEmail, 
+          sanitizedPassword, 
+          sanitizedFirstName, 
+          sanitizedLastName, 
+          formValues.role
+        );
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+      });
 
-    const result = await signUp(sanitizedEmail, sanitizedPassword, sanitizedFirstName, sanitizedLastName, role);
-    
-    if (result.error) {
-      setError(result.error);
-    } else {
-      // Reset form
-      setFirstName('');
-      setLastName('');
-      setEmail('');
-      setPassword('');
-      setRole('agent');
+      // Reset form and close dialog on success
+      reset();
       setOpen(false);
       onUserAdded();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create user';
+      setError(errorMessage);
     }
-    
-    setIsLoading(false);
   };
 
   return (
@@ -71,29 +91,35 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ onUserAdded }) => {
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="firstName">First Name</Label>
               <Input
                 id="firstName"
                 type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
+                value={values.firstName}
+                onChange={(e) => setValue('firstName', e.target.value)}
+                onBlur={() => setTouched('firstName')}
                 placeholder="First name"
               />
+              {touched.firstName && errors.firstName && (
+                <ErrorMessage message={errors.firstName.message} type="error" />
+              )}
             </div>
             <div>
               <Label htmlFor="lastName">Last Name</Label>
               <Input
                 id="lastName"
                 type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
+                value={values.lastName}
+                onChange={(e) => setValue('lastName', e.target.value)}
+                onBlur={() => setTouched('lastName')}
                 placeholder="Last name"
               />
+              {touched.lastName && errors.lastName && (
+                <ErrorMessage message={errors.lastName.message} type="error" />
+              )}
             </div>
           </div>
           
@@ -102,11 +128,14 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ onUserAdded }) => {
             <Input
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              value={values.email}
+              onChange={(e) => setValue('email', e.target.value)}
+              onBlur={() => setTouched('email')}
               placeholder="Enter email"
             />
+            {touched.email && errors.email && (
+              <ErrorMessage message={errors.email.message} type="error" />
+            )}
           </div>
           
           <div>
@@ -114,17 +143,35 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ onUserAdded }) => {
             <Input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+              value={values.password}
+              onChange={(e) => setValue('password', e.target.value)}
+              onBlur={() => setTouched('password')}
               placeholder="Enter password"
               minLength={6}
             />
+            {touched.password && errors.password && (
+              <ErrorMessage message={errors.password.message} type="error" />
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={values.confirmPassword}
+              onChange={(e) => setValue('confirmPassword', e.target.value)}
+              onBlur={() => setTouched('confirmPassword')}
+              placeholder="Confirm password"
+            />
+            {touched.confirmPassword && errors.confirmPassword && (
+              <ErrorMessage message={errors.confirmPassword.message} type="error" />
+            )}
           </div>
           
           <div>
             <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={(value: 'admin' | 'agent') => setRole(value)}>
+            <Select value={values.role} onValueChange={(value: 'admin' | 'agent') => setValue('role', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
@@ -137,7 +184,14 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ onUserAdded }) => {
           
           {error && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {error}
+                {isRetrying && attemptCount > 1 && (
+                  <span className="block mt-1 text-xs">
+                    Retrying... (Attempt {attemptCount}/3)
+                  </span>
+                )}
+              </AlertDescription>
             </Alert>
           )}
           
@@ -145,8 +199,11 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ onUserAdded }) => {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Creating...' : 'Create User'}
+            <Button 
+              type="submit" 
+              disabled={isRetrying || !isValid}
+            >
+              {isRetrying ? `Retrying... (${attemptCount}/3)` : 'Create User'}
             </Button>
           </div>
         </form>
