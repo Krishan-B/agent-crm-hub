@@ -198,6 +198,48 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          record_id: string | null
+          session_id: string | null
+          table_name: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          session_id?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          session_id?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       calendar_integrations: {
         Row: {
           access_token: string
@@ -355,6 +397,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      encrypted_data: {
+        Row: {
+          created_at: string
+          encrypted_value: string
+          encryption_key_id: string
+          field_name: string
+          id: string
+          record_id: string
+          table_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          encrypted_value: string
+          encryption_key_id: string
+          field_name: string
+          id?: string
+          record_id: string
+          table_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          encrypted_value?: string
+          encryption_key_id?: string
+          field_name?: string
+          id?: string
+          record_id?: string
+          table_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       kyc_documents: {
         Row: {
@@ -814,6 +889,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          action: string
+          blocked_until: string | null
+          count: number
+          created_at: string
+          id: string
+          identifier: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          action: string
+          blocked_until?: string | null
+          count?: number
+          created_at?: string
+          id?: string
+          identifier: string
+          updated_at?: string
+          window_start?: string
+        }
+        Update: {
+          action?: string
+          blocked_until?: string | null
+          count?: number
+          created_at?: string
+          id?: string
+          identifier?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       scheduled_reports: {
         Row: {
           created_at: string
@@ -939,6 +1047,39 @@ export type Database = {
           },
         ]
       }
+      two_factor_auth: {
+        Row: {
+          backup_codes: string[] | null
+          created_at: string
+          id: string
+          is_enabled: boolean
+          last_used_at: string | null
+          secret: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          backup_codes?: string[] | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          last_used_at?: string | null
+          secret: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          backup_codes?: string[] | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          last_used_at?: string | null
+          secret?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       webhook_logs: {
         Row: {
           created_at: string
@@ -1036,6 +1177,29 @@ export type Database = {
       can_access_lead: {
         Args: { p_lead_id: string }
         Returns: boolean
+      }
+      check_rate_limit: {
+        Args: {
+          p_identifier: string
+          p_action: string
+          p_limit?: number
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
+      create_audit_log: {
+        Args: {
+          p_user_id: string
+          p_action: string
+          p_table_name?: string
+          p_record_id?: string
+          p_old_values?: Json
+          p_new_values?: Json
+          p_ip_address?: unknown
+          p_user_agent?: string
+          p_session_id?: string
+        }
+        Returns: string
       }
       create_notification: {
         Args: {

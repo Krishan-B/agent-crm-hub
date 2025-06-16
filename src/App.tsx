@@ -1,146 +1,104 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import UserManagement from './pages/UserManagement';
+import Settings from './pages/Settings';
+import ErrorBoundary from './components/ErrorBoundary';
+import Leads from './pages/Leads';
+import Communications from './pages/Communications';
+import Calendar from './pages/Calendar';
+import SMS from './pages/SMS';
+import ProtectedRoute from './components/ProtectedRoute';
+import Security from './pages/Security';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Leads from "./pages/Leads";
-import LeadDetail from "./pages/LeadDetail";
-import Calendar from "./pages/Calendar";
-import Communications from "./pages/Communications";
-import EmailTemplates from "./pages/EmailTemplates";
-import Notifications from "./pages/Notifications";
-import UserManagement from "./pages/UserManagement";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound";
-import Analytics from "./pages/Analytics";
-import { AuthProvider } from "./contexts/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import ErrorBoundary from "./components/ErrorBoundary";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: (failureCount, error) => {
-        // Don't retry on 4xx errors
-        if (error && typeof error === 'object' && 'status' in error) {
-          const status = (error as any).status;
-          if (status >= 400 && status < 500) {
-            return false;
-          }
-        }
-        return failureCount < 3;
-      },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    },
-    mutations: {
-      retry: (failureCount, error) => {
-        // Don't retry mutations on client errors
-        if (error && typeof error === 'object' && 'status' in error) {
-          const status = (error as any).status;
-          if (status >= 400 && status < 500) {
-            return false;
-          }
-        }
-        return failureCount < 2;
+function App() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        refetchOnWindowFocus: false,
+        retry: false,
       },
     },
-  },
-});
+  });
 
-const App = () => (
-  <ErrorBoundary>
+  return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <ErrorBoundary>
-          <AuthProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<Index />} />
-                <Route path="/dashboard" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="/leads" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute>
-                      <Leads />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="/leads/:id" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute>
-                      <LeadDetail />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="/analytics" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute>
-                      <Analytics />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="/calendar" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute>
-                      <Calendar />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="/communications" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute>
-                      <Communications />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="/email-templates" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute>
-                      <EmailTemplates />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="/notifications" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute>
-                      <Notifications />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="/users" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute requiredRole="admin">
-                      <UserManagement />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="/settings" element={
-                  <ErrorBoundary>
-                    <ProtectedRoute>
-                      <Settings />
-                    </ProtectedRoute>
-                  </ErrorBoundary>
-                } />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </AuthProvider>
-        </ErrorBoundary>
-      </TooltipProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              } />
+              <Route
+                path="/user-management"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <UserManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/leads"
+                element={
+                  <ProtectedRoute>
+                    <Leads />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/communications"
+                element={
+                  <ProtectedRoute>
+                    <Communications />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <ProtectedRoute>
+                    <Calendar />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sms"
+                element={
+                  <ProtectedRoute>
+                    <SMS />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/security" 
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <Security />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </ErrorBoundary>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
-  </ErrorBoundary>
-);
+  );
+}
 
 export default App;

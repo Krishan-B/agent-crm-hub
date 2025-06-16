@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +27,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fetchProfile(session.user.id);
             if (event === 'SIGNED_IN') {
               logSession(session.user.id, 'login');
+              // Log successful login
+              supabase.rpc('create_audit_log', {
+                p_user_id: session.user.id,
+                p_action: 'login',
+                p_ip_address: null,
+                p_user_agent: navigator.userAgent
+              });
             }
           }, 0);
         } else {
@@ -57,12 +63,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
+      // Check rate limiting for login attempts
+      const canAttemptLogin = await supabase.rpc('check_rate_limit', {
+        p_identifier: email,
+        p_action: 'login',
+        p_limit: 5,
+        p_window_minutes: 15
+      });
+
+      if (!canAttemptLogin.data) {
+        setIsLoading(false);
+        return { error: 'Too many login attempts. Please try again later.' };
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
+        // Log failed login attempt
+        await supabase.rpc('create_audit_log', {
+          p_user_id: null,
+          p_action: 'login_failed',
+          p_new_values: { email, error: error.message },
+          p_ip_address: null,
+          p_user_agent: navigator.userAgent
+        });
+        
         setIsLoading(false);
         return { error: error.message };
       }
@@ -110,6 +138,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     if (user) {
       await logSession(user.id, 'logout');
+      // Log logout
+      await supabase.rpc('create_audit_log', {
+        p_user_id: user.id,
+        p_action: 'logout',
+        p_ip_address: null,
+        p_user_agent: navigator.userAgent
+      });
     }
     
     const { error } = await supabase.auth.signOut();
