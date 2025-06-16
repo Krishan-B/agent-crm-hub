@@ -89,6 +89,10 @@ class LRUCache<T> {
     }
     this.cache.set(key, value);
   }
+
+  clear(): void {
+    this.cache.clear();
+  }
 }
 
 export const searchCache = new LRUCache<any>(50);

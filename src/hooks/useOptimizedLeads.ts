@@ -72,12 +72,12 @@ export const useOptimizedLeads = () => {
 
   // Optimized fetch function with caching and query optimization
   const fetchLeadsOptimized = async (page = 1, limit = pageSize) => {
-    if (!user) return { data: [], hasMore: false };
+    if (!user) return { data: [], hasMore: false, count: 0 };
     
     // Check cache first
     const cached = leadsCache.get(cacheKey);
     if (cached) {
-      return { data: cached.data, hasMore: cached.hasMore };
+      return cached;
     }
 
     const offset = (page - 1) * limit;
@@ -171,7 +171,7 @@ export const useOptimizedLeads = () => {
   } = useLazyLoading(
     async (page, limit) => {
       const result = await fetchLeadsOptimized(page, limit);
-      setTotalCount(result.count || 0);
+      setTotalCount(result.count);
       return { data: result.data, hasMore: result.hasMore };
     },
     { pageSize, cacheKey: 'leads_lazy' }
@@ -185,7 +185,7 @@ export const useOptimizedLeads = () => {
     try {
       const result = await fetchLeadsOptimized(page, limit);
       setLeads(result.data);
-      setTotalCount(result.count || 0);
+      setTotalCount(result.count);
       setCurrentPage(page);
     } catch (err) {
       console.error('Error fetching leads:', err);
@@ -219,15 +219,13 @@ export const useOptimizedLeads = () => {
       );
       
       // Cache search results
-      if (filters.search) {
-        searchCache.set(`search_${filters.search}`, filtered);
-      }
+      searchCache.set(`search_${filters.search}`, filtered);
     }
 
     return filtered;
   }, [leads, filters.search]);
 
-  // Optimized bulk operations
+  // Simplified bulk operations without RPC calls
   const performBulkAction = async (action: BulkAction) => {
     if (selectedLeads.length === 0) return;
 
@@ -236,11 +234,10 @@ export const useOptimizedLeads = () => {
         case 'assign':
           if (!action.data?.agentId) return;
           
-          // Use batch update for better performance
-          const { error: assignError } = await supabase.rpc('bulk_assign_leads', {
-            lead_ids: selectedLeads,
-            agent_id: action.data.agentId
-          });
+          const { error: assignError } = await supabase
+            .from('leads')
+            .update({ assigned_agent_id: action.data.agentId })
+            .in('id', selectedLeads);
 
           if (assignError) throw assignError;
           break;
@@ -248,10 +245,10 @@ export const useOptimizedLeads = () => {
         case 'status_change':
           if (!action.data?.status) return;
           
-          const { error: statusError } = await supabase.rpc('bulk_update_status', {
-            lead_ids: selectedLeads,
-            new_status: action.data.status
-          });
+          const { error: statusError } = await supabase
+            .from('leads')
+            .update({ status: action.data.status })
+            .in('id', selectedLeads);
 
           if (statusError) throw statusError;
           break;
@@ -264,9 +261,10 @@ export const useOptimizedLeads = () => {
           break;
 
         case 'delete':
-          const { error: deleteError } = await supabase.rpc('bulk_delete_leads', {
-            lead_ids: selectedLeads
-          });
+          const { error: deleteError } = await supabase
+            .from('leads')
+            .delete()
+            .in('id', selectedLeads);
 
           if (deleteError) throw deleteError;
           break;
