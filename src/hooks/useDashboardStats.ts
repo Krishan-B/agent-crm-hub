@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
+import { useRealTimeData } from './useRealTimeData';
 
 export interface DashboardStats {
   totalLeads: number;
@@ -113,6 +114,13 @@ export const useDashboardStats = () => {
       setIsLoading(false);
     }
   };
+
+  // Set up real-time subscriptions to refresh stats when data changes
+  useRealTimeData({
+    onLeadsChange: fetchStats,
+    onActivitiesChange: fetchStats,
+    onKycDocumentsChange: fetchStats
+  });
 
   useEffect(() => {
     fetchStats();

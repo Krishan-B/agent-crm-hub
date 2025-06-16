@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
+import { useRealTimeData } from './useRealTimeData';
 
 export interface Lead {
   id: string;
@@ -65,6 +66,11 @@ export const useLeads = () => {
     }
   };
 
+  // Set up real-time subscriptions
+  useRealTimeData({
+    onLeadsChange: fetchLeads
+  });
+
   const addLead = async (leadData: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
 
@@ -80,7 +86,7 @@ export const useLeads = () => {
         throw error;
       }
 
-      await fetchLeads(); // Refresh the list
+      // Don't manually refresh - real-time subscription will handle it
       return data;
     } catch (err) {
       console.error('Error adding lead:', err);
@@ -102,7 +108,7 @@ export const useLeads = () => {
         throw error;
       }
 
-      await fetchLeads(); // Refresh the list
+      // Don't manually refresh - real-time subscription will handle it
     } catch (err) {
       console.error('Error updating lead:', err);
       throw err;

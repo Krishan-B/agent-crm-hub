@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { User, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
+import { useRealTimeData } from '../hooks/useRealTimeData';
 
 interface UserProfile {
   id: string;
@@ -24,10 +25,6 @@ const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { profile } = useAuth();
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -55,6 +52,15 @@ const UserManagement: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Set up real-time subscriptions
+  useRealTimeData({
+    onProfilesChange: fetchUsers
+  });
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const getRoleColor = (role: string) => {
     return role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800';
