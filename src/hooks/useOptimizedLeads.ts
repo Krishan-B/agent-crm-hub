@@ -31,7 +31,7 @@ export interface Lead {
   };
 }
 
-export { LeadFilters, BulkAction };
+export type { LeadFilters, BulkAction };
 
 export const useOptimizedLeads = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
