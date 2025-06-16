@@ -12,3 +12,12 @@ verify_jwt = true
 
 [functions.batch-operations]
 verify_jwt = true
+
+[functions.execute-workflow]
+verify_jwt = true
+
+[functions.send-notification-email]
+verify_jwt = true
+
+[functions.api]
+verify_jwt = false

@@ -22,6 +22,7 @@ import Settings from './pages/Settings';
 import Security from './pages/Security';
 import NotFound from './pages/NotFound';
 import WorkflowAutomation from './pages/WorkflowAutomation';
+import ProductionReadiness from './pages/ProductionReadiness';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
@@ -54,6 +55,7 @@ const App: React.FC = () => {
           <Route path="/user-management" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
+          <Route path="/production-readiness" element={<ProtectedRoute><ProductionReadiness /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
