@@ -198,6 +198,45 @@ export type Database = {
           },
         ]
       }
+      calendar_integrations: {
+        Row: {
+          access_token: string
+          calendar_id: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          provider: string
+          refresh_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          calendar_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          provider: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          calendar_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          provider?: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       communication_templates: {
         Row: {
           content: string
@@ -820,6 +859,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_messages: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          delivered_at: string | null
+          error_message: string | null
+          external_id: string | null
+          from_phone: string
+          id: string
+          sent_at: string | null
+          status: string
+          to_phone: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by: string
+          delivered_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          from_phone: string
+          id?: string
+          sent_at?: string | null
+          status?: string
+          to_phone: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          from_phone?: string
+          id?: string
+          sent_at?: string | null
+          status?: string
+          to_phone?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -857,6 +938,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      webhook_logs: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          webhook_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          response_body?: string | null
+          response_status?: number | null
+          webhook_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          created_at: string
+          created_by: string
+          events: string[]
+          headers: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          retry_count: number
+          secret: string
+          timeout: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          events?: string[]
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          name: string
+          retry_count?: number
+          secret: string
+          timeout?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          events?: string[]
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          retry_count?: number
+          secret?: string
+          timeout?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
       }
     }
     Views: {

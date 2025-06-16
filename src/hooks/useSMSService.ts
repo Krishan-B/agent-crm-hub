@@ -5,8 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 export interface SMSMessage {
   id: string;
-  to: string;
-  from: string;
+  to_phone: string;
+  from_phone: string;
   body: string;
   status: 'queued' | 'sent' | 'delivered' | 'failed';
   external_id?: string;
@@ -19,7 +19,7 @@ export interface SMSMessage {
 export interface SMSTemplate {
   id: string;
   name: string;
-  body: string;
+  content: string;
   variables: string[];
   is_active: boolean;
   created_at: string;

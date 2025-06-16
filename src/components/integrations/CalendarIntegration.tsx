@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar, Plus, Sync, Settings, ExternalLink } from 'lucide-react';
+import { Calendar, Plus, RefreshCw, Settings, ExternalLink } from 'lucide-react';
 import { useCalendarIntegration } from '../../hooks/useCalendarIntegration';
 import { useToast } from '@/hooks/use-toast';
 
@@ -141,7 +141,7 @@ const CalendarIntegration: React.FC = () => {
                             onClick={() => handleSync(integration.id)}
                             disabled={isLoading}
                           >
-                            <Sync className="h-4 w-4" />
+                            <RefreshCw className="h-4 w-4" />
                           </Button>
                           <Button variant="outline" size="sm">
                             <Settings className="h-4 w-4" />
