@@ -15,6 +15,8 @@ import CommunicationsTab from '../components/CommunicationsTab';
 import AccountSummaryCard from '../components/AccountSummaryCard';
 import QuickActionsCard from '../components/QuickActionsCard';
 import AddCommentCard from '../components/AddCommentCard';
+import CommunicationDialog from '../components/CommunicationDialog';
+import LeadTagManager from '../components/LeadTagManager';
 
 const LeadDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -126,6 +128,12 @@ const LeadDetail: React.FC = () => {
       <div className="space-y-6">
         <LeadHeader lead={lead} />
 
+        {/* Lead Tags */}
+        <div className="bg-white p-4 rounded-lg border">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Tags</h3>
+          <LeadTagManager leadId={lead.id} />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Tabs defaultValue="overview" className="space-y-4">
@@ -154,6 +162,15 @@ const LeadDetail: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="communications" className="space-y-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Communications History</h3>
+                  <CommunicationDialog
+                    leadId={lead.id}
+                    leadName={`${lead.first_name} ${lead.last_name}`}
+                    leadEmail={lead.email}
+                    leadPhone={lead.phone}
+                  />
+                </div>
                 <CommunicationsTab 
                   activities={activities}
                   formatActivityType={formatActivityType}

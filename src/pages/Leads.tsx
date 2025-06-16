@@ -7,12 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, User, Phone, Bell, Loader2 } from 'lucide-react';
+import { Search, User, Phone, Bell, Loader2, Filter } from 'lucide-react';
 import { useLeads } from '../hooks/useLeads';
+import CommunicationDialog from '../components/CommunicationDialog';
+import AdvancedSearchDialog from '../components/AdvancedSearchDialog';
 
 const Leads: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const { leads, isLoading, error } = useLeads();
 
   const getStatusColor = (status: string) => {
@@ -28,7 +32,18 @@ const Leads: React.FC = () => {
     }
   };
 
-  const filteredLeads = leads.filter(lead => {
+  const handleSearchResults = (results: any[]) => {
+    setSearchResults(results);
+    setShowSearchResults(true);
+  };
+
+  const clearSearch = () => {
+    setShowSearchResults(false);
+    setSearchResults([]);
+  };
+
+  // Use search results if available, otherwise use filtered leads
+  const displayLeads = showSearchResults ? searchResults : leads.filter(lead => {
     const matchesSearch = `${lead.first_name} ${lead.last_name} ${lead.email}`.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -70,20 +85,33 @@ const Leads: React.FC = () => {
                   className="pl-10"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="contacted">Contacted</SelectItem>
-                  <SelectItem value="kyc_pending">KYC Pending</SelectItem>
-                  <SelectItem value="kyc_approved">KYC Approved</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="new">New</SelectItem>
+                    <SelectItem value="contacted">Contacted</SelectItem>
+                    <SelectItem value="kyc_pending">KYC Pending</SelectItem>
+                    <SelectItem value="kyc_approved">KYC Approved</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                  </SelectContent>
+                </Select>
+                <AdvancedSearchDialog onResults={handleSearchResults} />
+              </div>
             </div>
+            {showSearchResults && (
+              <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+                <span className="text-blue-800">
+                  Showing {searchResults.length} search results
+                </span>
+                <Button variant="ghost" size="sm" onClick={clearSearch}>
+                  Clear Search
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -104,7 +132,7 @@ const Leads: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLeads.map((lead) => (
+                    {displayLeads.map((lead) => (
                       <tr key={lead.id} className="border-b hover:bg-gray-50">
                         <td className="py-4 px-4">
                           <div className="flex items-center space-x-3">
@@ -151,9 +179,17 @@ const Leads: React.FC = () => {
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex space-x-2">
-                            <Button variant="ghost" size="sm">
-                              <Phone className="h-4 w-4" />
-                            </Button>
+                            <CommunicationDialog
+                              leadId={lead.id}
+                              leadName={`${lead.first_name} ${lead.last_name}`}
+                              leadEmail={lead.email}
+                              leadPhone={lead.phone}
+                              trigger={
+                                <Button variant="ghost" size="sm">
+                                  <Phone className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
                             <Button variant="ghost" size="sm">
                               <Bell className="h-4 w-4" />
                             </Button>
@@ -163,7 +199,7 @@ const Leads: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
-                {filteredLeads.length === 0 && !isLoading && (
+                {displayLeads.length === 0 && !isLoading && (
                   <div className="text-center py-8">
                     <p className="text-gray-500">No leads found matching your criteria.</p>
                   </div>

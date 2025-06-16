@@ -9,6 +9,7 @@ interface UseRealTimeDataProps {
   onTransactionsChange?: () => void;
   onKycDocumentsChange?: () => void;
   onProfilesChange?: () => void;
+  onCommunicationsChange?: () => void;
 }
 
 export const useRealTimeData = ({
@@ -16,7 +17,8 @@ export const useRealTimeData = ({
   onActivitiesChange,
   onTransactionsChange,
   onKycDocumentsChange,
-  onProfilesChange
+  onProfilesChange,
+  onCommunicationsChange
 }: UseRealTimeDataProps) => {
   const { user } = useAuth();
 
@@ -110,11 +112,28 @@ export const useRealTimeData = ({
       subscriptions.push(profilesSubscription);
     }
 
+    // Subscribe to communications changes
+    if (onCommunicationsChange) {
+      const communicationsSubscription = supabase
+        .channel('communications-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'communications'
+        }, () => {
+          console.log('Communications data changed');
+          onCommunicationsChange();
+        })
+        .subscribe();
+      
+      subscriptions.push(communicationsSubscription);
+    }
+
     // Cleanup function
     return () => {
       subscriptions.forEach(subscription => {
         supabase.removeChannel(subscription);
       });
     };
-  }, [user, onLeadsChange, onActivitiesChange, onTransactionsChange, onKycDocumentsChange, onProfilesChange]);
+  }, [user, onLeadsChange, onActivitiesChange, onTransactionsChange, onKycDocumentsChange, onProfilesChange, onCommunicationsChange]);
 };
