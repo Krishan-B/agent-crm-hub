@@ -30,11 +30,12 @@ export const useRealTimeData = ({
     if (!user) return;
 
     const channels: any[] = [];
+    const timestamp = Date.now();
 
     // Subscribe to leads changes
     if (onLeadsChange) {
       const leadsChannel = supabase
-        .channel(`leads-changes-${user.id}`)
+        .channel(`leads-${user.id}-${timestamp}-${Math.random()}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -51,7 +52,7 @@ export const useRealTimeData = ({
     // Subscribe to activities changes
     if (onActivitiesChange) {
       const activitiesChannel = supabase
-        .channel(`activities-changes-${user.id}`)
+        .channel(`activities-${user.id}-${timestamp}-${Math.random()}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -68,7 +69,7 @@ export const useRealTimeData = ({
     // Subscribe to transactions changes
     if (onTransactionsChange) {
       const transactionsChannel = supabase
-        .channel(`transactions-changes-${user.id}`)
+        .channel(`transactions-${user.id}-${timestamp}-${Math.random()}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -85,7 +86,7 @@ export const useRealTimeData = ({
     // Subscribe to KYC documents changes
     if (onKycDocumentsChange) {
       const kycChannel = supabase
-        .channel(`kyc-changes-${user.id}`)
+        .channel(`kyc-${user.id}-${timestamp}-${Math.random()}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -102,7 +103,7 @@ export const useRealTimeData = ({
     // Subscribe to profiles changes (for admins)
     if (onProfilesChange) {
       const profilesChannel = supabase
-        .channel(`profiles-changes-${user.id}`)
+        .channel(`profiles-${user.id}-${timestamp}-${Math.random()}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -119,7 +120,7 @@ export const useRealTimeData = ({
     // Subscribe to communications changes
     if (onCommunicationsChange) {
       const communicationsChannel = supabase
-        .channel(`communications-changes-${user.id}`)
+        .channel(`communications-${user.id}-${timestamp}-${Math.random()}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -136,7 +137,7 @@ export const useRealTimeData = ({
     // Subscribe to appointments changes
     if (onAppointmentsChange) {
       const appointmentsChannel = supabase
-        .channel(`appointments-changes-${user.id}`)
+        .channel(`appointments-${user.id}-${timestamp}-${Math.random()}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -153,7 +154,7 @@ export const useRealTimeData = ({
     // Subscribe to notifications changes
     if (onNotificationsChange) {
       const notificationsChannel = supabase
-        .channel(`notifications-changes-${user.id}`)
+        .channel(`notifications-${user.id}-${timestamp}-${Math.random()}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
