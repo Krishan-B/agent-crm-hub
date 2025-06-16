@@ -101,7 +101,15 @@ export const useCommunications = (leadId?: string) => {
         return;
       }
 
-      setTemplates(data || []);
+      // Transform the data to match our interface, properly handling the variables field
+      const transformedTemplates: CommunicationTemplate[] = (data || []).map(template => ({
+        ...template,
+        variables: Array.isArray(template.variables) ? template.variables : 
+                  typeof template.variables === 'string' ? JSON.parse(template.variables) :
+                  []
+      }));
+
+      setTemplates(transformedTemplates);
     } catch (err) {
       console.error('Error fetching templates:', err);
     }
