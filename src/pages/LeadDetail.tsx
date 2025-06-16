@@ -17,6 +17,7 @@ import QuickActionsCard from '../components/QuickActionsCard';
 import AddCommentCard from '../components/AddCommentCard';
 import CommunicationDialog from '../components/CommunicationDialog';
 import LeadTagManager from '../components/LeadTagManager';
+import AppointmentDialog from '../components/AppointmentDialog';
 
 const LeadDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -164,12 +165,19 @@ const LeadDetail: React.FC = () => {
               <TabsContent value="communications" className="space-y-4">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">Communications History</h3>
-                  <CommunicationDialog
-                    leadId={lead.id}
-                    leadName={`${lead.first_name} ${lead.last_name}`}
-                    leadEmail={lead.email}
-                    leadPhone={lead.phone}
-                  />
+                  <div className="flex gap-2">
+                    <AppointmentDialog
+                      leadId={lead.id}
+                      leadName={`${lead.first_name} ${lead.last_name}`}
+                      onAppointmentCreated={fetchLeadDetail}
+                    />
+                    <CommunicationDialog
+                      leadId={lead.id}
+                      leadName={`${lead.first_name} ${lead.last_name}`}
+                      leadEmail={lead.email}
+                      leadPhone={lead.phone}
+                    />
+                  </div>
                 </div>
                 <CommunicationsTab 
                   activities={activities}

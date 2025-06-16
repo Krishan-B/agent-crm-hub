@@ -1,161 +1,121 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    );
-
-    const { leadId } = await req.json();
-
+    const { leadId } = await req.json()
+    
     if (!leadId) {
-      throw new Error('Lead ID is required');
+      return new Response(
+        JSON.stringify({ error: 'Lead ID is required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
     }
 
-    // Fetch lead data with activities and transactions
-    const { data: lead, error: leadError } = await supabaseClient
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // Fetch lead data and related information
+    const { data: lead, error: leadError } = await supabase
       .from('leads')
-      .select(`
-        *,
-        lead_activities(count),
-        transactions(*)
-      `)
+      .select('*')
       .eq('id', leadId)
-      .single();
+      .single()
 
-    if (leadError) {
-      throw new Error(`Failed to fetch lead: ${leadError.message}`);
+    if (leadError || !lead) {
+      return new Response(
+        JSON.stringify({ error: 'Lead not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      )
     }
 
-    // Calculate AI score based on various factors
-    let score = 0;
-    const factors = [];
-
-    // Country scoring (example weights)
-    const countryScores: Record<string, number> = {
-      'United States': 25,
-      'United Kingdom': 22,
-      'Canada': 20,
-      'Australia': 18,
-      'Germany': 15,
-      'France': 12,
-      'Spain': 10,
-      'Italy': 8,
-    };
-
-    const countryScore = countryScores[lead.country] || 5;
-    score += countryScore;
-    factors.push(`Country (${lead.country}): +${countryScore}`);
-
-    // Balance and transaction activity
-    const totalDeposits = lead.transactions
-      ?.filter((t: any) => t.type === 'deposit')
-      .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0) || 0;
-
-    if (totalDeposits > 5000) {
-      score += 30;
-      factors.push('High deposit volume: +30');
-    } else if (totalDeposits > 1000) {
-      score += 20;
-      factors.push('Medium deposit volume: +20');
-    } else if (totalDeposits > 0) {
-      score += 10;
-      factors.push('Has made deposits: +10');
-    }
-
-    // KYC status
-    switch (lead.kyc_status) {
-      case 'approved':
-        score += 25;
-        factors.push('KYC approved: +25');
-        break;
-      case 'submitted':
-      case 'pending':
-        score += 15;
-        factors.push('KYC submitted: +15');
-        break;
-      default:
-        factors.push('No KYC: +0');
-    }
-
-    // Activity level
-    const activityCount = lead.lead_activities?.[0]?.count || 0;
-    if (activityCount > 10) {
-      score += 15;
-      factors.push('High activity: +15');
-    } else if (activityCount > 5) {
-      score += 10;
-      factors.push('Medium activity: +10');
-    } else if (activityCount > 0) {
-      score += 5;
-      factors.push('Some activity: +5');
-    }
-
-    // Registration recency (boost for recent registrations)
-    const registrationDate = new Date(lead.registration_date);
-    const daysSinceRegistration = Math.floor((Date.now() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysSinceRegistration <= 7) {
-      score += 10;
-      factors.push('Recent registration: +10');
-    } else if (daysSinceRegistration <= 30) {
-      score += 5;
-      factors.push('Registration within month: +5');
-    }
-
-    // Normalize score to 0-100
-    const finalScore = Math.min(Math.max(score, 0), 100);
-
-    // Determine score category
-    let category = 'Cold';
-    if (finalScore >= 80) category = 'Hot';
-    else if (finalScore >= 60) category = 'Warm';
-    else if (finalScore >= 40) category = 'Lukewarm';
-
-    // Store the score in lead_activities
-    await supabaseClient
+    // Fetch activities
+    const { data: activities } = await supabase
       .from('lead_activities')
+      .select('*')
+      .eq('lead_id', leadId)
+
+    // Fetch communications
+    const { data: communications } = await supabase
+      .from('communications')
+      .select('*')
+      .eq('lead_id', leadId)
+
+    // Fetch transactions
+    const { data: transactions } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('lead_id', leadId)
+
+    // Calculate scoring factors
+    const activityScore = Math.min((activities?.length || 0) * 2, 30)
+    const communicationScore = Math.min((communications?.length || 0) * 3, 25)
+    
+    const depositAmount = transactions?.reduce((sum, t) => 
+      t.type === 'deposit' ? sum + Number(t.amount) : sum, 0) || 0
+    const depositScore = Math.min(depositAmount / 100, 25)
+    
+    const kycScore = lead.kyc_status === 'approved' ? 20 : 
+                    lead.kyc_status === 'pending' ? 10 : 0
+
+    const totalScore = Math.round(activityScore + communicationScore + depositScore + kycScore)
+
+    const scoreFactors = {
+      activity_level: activityScore,
+      engagement_quality: communicationScore,
+      deposit_potential: depositScore,
+      kyc_completion: kycScore,
+      total_activities: activities?.length || 0,
+      total_communications: communications?.length || 0,
+      total_deposits: depositAmount,
+      kyc_status: lead.kyc_status
+    }
+
+    // Save the score
+    const { error: insertError } = await supabase
+      .from('lead_scores')
       .insert({
         lead_id: leadId,
-        activity_type: 'ai_score',
-        content: `AI Score: ${finalScore} (${category}) - Factors: ${factors.join(', ')}`
-      });
+        score: totalScore,
+        score_factors: scoreFactors,
+        calculated_by: 'ai_system',
+        version: '1.0'
+      })
 
-    console.log(`AI Lead Scoring completed for lead ${leadId}: ${finalScore} (${category})`);
+    if (insertError) {
+      console.error('Error saving lead score:', insertError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to save score' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
 
     return new Response(
-      JSON.stringify({
-        leadId,
-        score: finalScore,
-        category,
-        factors,
-        timestamp: new Date().toISOString()
+      JSON.stringify({ 
+        score: totalScore,
+        scoreFactors,
+        message: 'Lead score calculated successfully'
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
   } catch (error) {
-    console.error('Error in ai-lead-scoring function:', error);
+    console.error('Error in ai-lead-scoring:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+      JSON.stringify({ error: 'Internal server error' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
   }
-});
+})

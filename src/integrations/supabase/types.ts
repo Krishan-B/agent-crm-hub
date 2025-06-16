@@ -9,6 +9,195 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      agent_availability: {
+        Row: {
+          agent_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_available: boolean
+          start_time: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_available?: boolean
+          start_time: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_available?: boolean
+          start_time?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_availability_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_snapshots: {
+        Row: {
+          active_leads: number
+          activities_count: number
+          appointments_scheduled: number
+          average_deposit: number
+          communications_sent: number
+          conversion_rate: number
+          converted_leads: number
+          created_at: string
+          id: string
+          kyc_approved: number
+          kyc_pending: number
+          kyc_rejected: number
+          metadata: Json | null
+          new_leads_today: number
+          snapshot_date: string
+          total_deposits: number
+          total_leads: number
+        }
+        Insert: {
+          active_leads?: number
+          activities_count?: number
+          appointments_scheduled?: number
+          average_deposit?: number
+          communications_sent?: number
+          conversion_rate?: number
+          converted_leads?: number
+          created_at?: string
+          id?: string
+          kyc_approved?: number
+          kyc_pending?: number
+          kyc_rejected?: number
+          metadata?: Json | null
+          new_leads_today?: number
+          snapshot_date: string
+          total_deposits?: number
+          total_leads?: number
+        }
+        Update: {
+          active_leads?: number
+          activities_count?: number
+          appointments_scheduled?: number
+          average_deposit?: number
+          communications_sent?: number
+          conversion_rate?: number
+          converted_leads?: number
+          created_at?: string
+          id?: string
+          kyc_approved?: number
+          kyc_pending?: number
+          kyc_rejected?: number
+          metadata?: Json | null
+          new_leads_today?: number
+          snapshot_date?: string
+          total_deposits?: number
+          total_leads?: number
+        }
+        Relationships: []
+      }
+      appointments: {
+        Row: {
+          agent_id: string
+          appointment_type: Database["public"]["Enums"]["appointment_type"]
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_minutes: number
+          id: string
+          lead_id: string
+          location: string | null
+          meeting_url: string | null
+          notes: string | null
+          reminder_sent: boolean
+          reminder_sent_at: string | null
+          scheduled_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          appointment_type: Database["public"]["Enums"]["appointment_type"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          lead_id: string
+          location?: string | null
+          meeting_url?: string | null
+          notes?: string | null
+          reminder_sent?: boolean
+          reminder_sent_at?: string | null
+          scheduled_at: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          appointment_type?: Database["public"]["Enums"]["appointment_type"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          lead_id?: string
+          location?: string | null
+          meeting_url?: string | null
+          notes?: string | null
+          reminder_sent?: boolean
+          reminder_sent_at?: string | null
+          scheduled_at?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communication_templates: {
         Row: {
           content: string
@@ -214,6 +403,44 @@ export type Database = {
           },
           {
             foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_scores: {
+        Row: {
+          calculated_at: string
+          calculated_by: string | null
+          id: string
+          lead_id: string
+          score: number
+          score_factors: Json | null
+          version: string | null
+        }
+        Insert: {
+          calculated_at?: string
+          calculated_by?: string | null
+          id?: string
+          lead_id: string
+          score: number
+          score_factors?: Json | null
+          version?: string | null
+        }
+        Update: {
+          calculated_at?: string
+          calculated_by?: string | null
+          id?: string
+          lead_id?: string
+          score?: number
+          score_factors?: Json | null
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_scores_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
@@ -478,12 +705,30 @@ export type Database = {
         Args: { p_lead_id: string }
         Returns: boolean
       }
+      generate_daily_analytics_snapshot: {
+        Args: { target_date?: string }
+        Returns: undefined
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
     }
     Enums: {
+      appointment_status:
+        | "scheduled"
+        | "confirmed"
+        | "completed"
+        | "cancelled"
+        | "no_show"
+        | "rescheduled"
+      appointment_type:
+        | "call"
+        | "meeting"
+        | "demo"
+        | "follow_up"
+        | "kyc_review"
+        | "onboarding"
       communication_status: "sent" | "delivered" | "failed" | "pending" | "read"
       communication_type: "email" | "sms" | "call" | "meeting" | "note"
     }
@@ -601,6 +846,22 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      appointment_status: [
+        "scheduled",
+        "confirmed",
+        "completed",
+        "cancelled",
+        "no_show",
+        "rescheduled",
+      ],
+      appointment_type: [
+        "call",
+        "meeting",
+        "demo",
+        "follow_up",
+        "kyc_review",
+        "onboarding",
+      ],
       communication_status: ["sent", "delivered", "failed", "pending", "read"],
       communication_type: ["email", "sms", "call", "meeting", "note"],
     },
