@@ -37,7 +37,7 @@ const OptimizedLeads: React.FC = () => {
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [bulkActionType, setBulkActionType] = useState<string>('');
-  const [viewMode, setViewMode<'paginated' | 'infinite'>('paginated');
+  const [viewMode, setViewMode] = useState<'paginated' | 'infinite'>('paginated');
 
   // Intersection observer for infinite scroll
   const loadMoreRef = useIntersectionObserver(
