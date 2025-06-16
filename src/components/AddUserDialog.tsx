@@ -10,7 +10,7 @@ import { Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { useRetry } from '@/hooks/useRetry';
-import { signupSchema } from '@/lib/validation';
+import { nameSchema, emailSchema, passwordSchema } from '@/lib/validation';
 import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
 
@@ -24,8 +24,17 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ onUserAdded }) => {
   const { signUp } = useAuth();
   const { retry, isRetrying, attemptCount } = useRetry({ maxAttempts: 3, delay: 1000 });
 
-  const formSchema = signupSchema.extend({
+  // Create a new schema that includes role field
+  const formSchema = z.object({
+    firstName: nameSchema,
+    lastName: nameSchema,
+    email: emailSchema,
+    password: passwordSchema,
+    confirmPassword: z.string(),
     role: z.enum(['admin', 'agent'])
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"]
   });
 
   const {

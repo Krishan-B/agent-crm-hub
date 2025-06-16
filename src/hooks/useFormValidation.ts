@@ -28,17 +28,20 @@ export const useFormValidation = <T extends Record<string, any>>(
 
   const validateField = useCallback((name: keyof T, value: any) => {
     try {
-      // Create a partial schema for single field validation
-      const fieldSchema = schema.pick({ [name]: true } as any);
-      fieldSchema.parse({ [name]: value });
-      return null;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return { message: error.errors[0]?.message || 'Invalid value' };
+      // For single field validation, we'll validate the entire form and extract the field error
+      const result = schema.safeParse({ ...state.values, [name]: value });
+      
+      if (result.success) {
+        return null;
+      } else {
+        // Find the error for this specific field
+        const fieldError = result.error.errors.find(err => err.path[0] === name);
+        return fieldError ? { message: fieldError.message } : null;
       }
+    } catch (error) {
       return { message: 'Validation error' };
     }
-  }, [schema]);
+  }, [schema, state.values]);
 
   const validateForm = useCallback((values: T) => {
     try {
