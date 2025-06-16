@@ -47,7 +47,7 @@ export const useNotifications = () => {
     setError(null);
     
     try {
-      const { data, error } = await supabase
+      const { data: notificationsData, error } = await supabase
         .from('notifications')
         .select('*')
         .order('created_at', { ascending: false })
@@ -59,8 +59,15 @@ export const useNotifications = () => {
         return;
       }
 
-      setNotifications(data || []);
-      setUnreadCount((data || []).filter(n => !n.read).length);
+      // Type cast the data to ensure proper typing
+      const typedNotifications = (notificationsData || []).map(notification => ({
+        ...notification,
+        type: notification.type as Notification['type'],
+        priority: notification.priority as Notification['priority']
+      }));
+
+      setNotifications(typedNotifications);
+      setUnreadCount(typedNotifications.filter(n => !n.read).length);
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError('Failed to fetch notifications');
@@ -73,7 +80,7 @@ export const useNotifications = () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
+      const { data: preferencesData, error } = await supabase
         .from('notification_preferences')
         .select('*')
         .order('notification_type');
@@ -83,7 +90,7 @@ export const useNotifications = () => {
         return;
       }
 
-      setPreferences(data || []);
+      setPreferences(preferencesData || []);
     } catch (err) {
       console.error('Error fetching preferences:', err);
     }
@@ -121,7 +128,7 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase.rpc('mark_all_notifications_read');
+      const { data: result, error } = await supabase.rpc('mark_all_notifications_read');
 
       if (error) {
         console.error('Error marking all notifications as read:', error);
@@ -134,7 +141,7 @@ export const useNotifications = () => {
       );
       setUnreadCount(0);
 
-      return data;
+      return result;
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
       throw err;
@@ -145,7 +152,7 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const { data: updatedPreference, error } = await supabase
         .from('notification_preferences')
         .update({
           ...updates,
@@ -164,11 +171,11 @@ export const useNotifications = () => {
       // Update local state
       setPreferences(prev => 
         prev.map(p => 
-          p.notification_type === notificationType ? data : p
+          p.notification_type === notificationType ? updatedPreference : p
         )
       );
 
-      return data;
+      return updatedPreference;
     } catch (err) {
       console.error('Error updating preference:', err);
       throw err;
@@ -181,18 +188,18 @@ export const useNotifications = () => {
     message: string,
     type: string,
     priority: string = 'medium',
-    data?: any,
+    notificationData?: any,
     relatedEntityType?: string,
     relatedEntityId?: string
   ) => {
     try {
-      const { data, error } = await supabase.rpc('create_notification', {
+      const { data: result, error } = await supabase.rpc('create_notification', {
         p_user_id: userId,
         p_title: title,
         p_message: message,
         p_type: type,
         p_priority: priority,
-        p_data: data,
+        p_data: notificationData,
         p_related_entity_type: relatedEntityType,
         p_related_entity_id: relatedEntityId
       });
@@ -202,7 +209,7 @@ export const useNotifications = () => {
         throw error;
       }
 
-      return data;
+      return result;
     } catch (err) {
       console.error('Error creating notification:', err);
       throw err;
