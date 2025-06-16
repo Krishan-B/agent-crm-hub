@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -99,5 +100,85 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Mobile-first responsive utilities */
+@layer utilities {
+  /* Touch targets for better mobile interaction */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+
+  /* Mobile-specific spacing */
+  .mobile-safe-area {
+    @apply pb-safe-bottom;
+  }
+
+  /* Scrollable containers for mobile */
+  .mobile-scroll {
+    @apply overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100;
+  }
+
+  /* Card improvements for mobile */
+  .mobile-card {
+    @apply rounded-lg border bg-card text-card-foreground shadow-sm mx-2 sm:mx-0;
+  }
+
+  /* Form improvements for mobile */
+  .mobile-form-spacing {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  /* Button spacing for mobile */
+  .mobile-button-spacing {
+    @apply space-x-2 sm:space-x-4;
+  }
+
+  /* Text improvements for mobile */
+  .mobile-text {
+    @apply text-sm sm:text-base;
+  }
+
+  .mobile-heading {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+
+  /* Grid improvements for mobile */
+  .mobile-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+
+  /* Sticky header compensation */
+  .content-with-sticky-header {
+    @apply pt-16 sm:pt-20;
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+    background-color: rgb(209 213 219);
+    border-radius: 0.25rem;
+  }
+  
+  .scrollbar-track-gray-100::-webkit-scrollbar-track {
+    background-color: rgb(243 244 246);
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+/* iOS safe area support */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }

@@ -33,16 +33,16 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-blue-600">Plexop CRM</CardTitle>
-          <CardDescription>Sign in to access your account</CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <Card className="w-full max-w-md mobile-card">
+        <CardHeader className="text-center space-y-2">
+          <CardTitle className="mobile-heading font-bold text-blue-600">Plexop CRM</CardTitle>
+          <CardDescription className="mobile-text">Sign in to access your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
+          <form onSubmit={handleLogin} className="mobile-form-spacing">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="mobile-text">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -50,11 +50,13 @@ const Login: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Enter your email"
+                className="touch-target text-base" // Prevent zoom on iOS
+                autoComplete="email"
               />
             </div>
             
-            <div>
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="mobile-text">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -62,16 +64,23 @@ const Login: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="Enter your password"
+                className="touch-target text-base" // Prevent zoom on iOS
+                autoComplete="current-password"
               />
             </div>
             
             {error && (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="mobile-text">{error}</AlertDescription>
               </Alert>
             )}
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full touch-target" 
+              disabled={isLoading}
+              size="lg"
+            >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
