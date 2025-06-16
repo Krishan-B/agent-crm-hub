@@ -1,20 +1,11 @@
 
 import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { Lead } from '../hooks/useOptimizedLeads';
 import { AnalyticsSnapshot } from '../hooks/useAnalytics';
 
-// Extend jsPDF with autoTable - using any type to avoid import issues
-declare global {
-  interface Window {
-    jsPDF: any;
-  }
-}
-
-// Import autoTable plugin directly
-import 'jspdf-autotable';
-
-// Extend jsPDF instance with autoTable method
+// Extend jsPDF with autoTable method
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
 }
