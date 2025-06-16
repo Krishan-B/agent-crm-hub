@@ -1,223 +1,188 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
-interface PerformanceMetrics {
-  loadTime: number;
-  memoryUsage: number;
+export interface PerformanceMetrics {
+  pageLoadTime: number;
   renderTime: number;
-  apiLatency: number;
-  errorRate: number;
-  userSatisfactionScore: number;
+  memoryUsage: number;
+  networkLatency: number;
+  errorCount: number;
+  timestamp: Date;
 }
 
-interface PerformanceAlert {
+export interface PerformanceAlert {
   id: string;
   type: 'warning' | 'error' | 'info';
   message: string;
-  timestamp: Date;
-  metric: keyof PerformanceMetrics;
+  metric: string;
   value: number;
   threshold: number;
+  timestamp: Date;
 }
 
 export const usePerformanceMonitor = () => {
-  const [metrics, setMetrics] = useState<PerformanceMetrics>({
-    loadTime: 0,
-    memoryUsage: 0,
-    renderTime: 0,
-    apiLatency: 0,
-    errorRate: 0,
-    userSatisfactionScore: 95
-  });
-
+  const [metrics, setMetrics] = useState<PerformanceMetrics[]>([]);
   const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
   const [isMonitoring, setIsMonitoring] = useState(false);
 
   // Performance thresholds
   const thresholds = {
-    loadTime: 2000, // 2 seconds
+    pageLoadTime: 3000, // 3 seconds
+    renderTime: 100, // 100ms
     memoryUsage: 100, // 100MB
-    renderTime: 16, // 16ms (60fps)
-    apiLatency: 1000, // 1 second
-    errorRate: 5, // 5%
-    userSatisfactionScore: 80 // 80%
+    networkLatency: 1000, // 1 second
   };
 
-  const measureLoadTime = useCallback(() => {
-    const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    if (navigationTiming) {
-      const loadTime = navigationTiming.loadEventEnd - navigationTiming.navigationStart;
-      setMetrics(prev => ({ ...prev, loadTime }));
-      
-      if (loadTime > thresholds.loadTime) {
-        addAlert('warning', 'Page load time is above optimal threshold', 'loadTime', loadTime, thresholds.loadTime);
-      }
-    }
-  }, []);
-
-  const measureMemoryUsage = useCallback(() => {
-    if ('memory' in performance) {
-      const memory = (performance as any).memory;
-      const memoryUsageMB = memory.usedJSHeapSize / 1024 / 1024;
-      setMetrics(prev => ({ ...prev, memoryUsage: memoryUsageMB }));
-      
-      if (memoryUsageMB > thresholds.memoryUsage) {
-        addAlert('warning', 'Memory usage is high', 'memoryUsage', memoryUsageMB, thresholds.memoryUsage);
-      }
-    }
-  }, []);
-
-  const measureRenderTime = useCallback(() => {
-    let frameCount = 0;
-    let totalTime = 0;
-    const maxFrames = 60;
-
-    const measureFrame = () => {
-      const start = performance.now();
-      
-      requestAnimationFrame(() => {
-        const end = performance.now();
-        const frameTime = end - start;
-        
-        frameCount++;
-        totalTime += frameTime;
-        
-        if (frameCount < maxFrames) {
-          measureFrame();
-        } else {
-          const avgRenderTime = totalTime / frameCount;
-          setMetrics(prev => ({ ...prev, renderTime: avgRenderTime }));
-          
-          if (avgRenderTime > thresholds.renderTime) {
-            addAlert('warning', 'Render time is affecting smooth animations', 'renderTime', avgRenderTime, thresholds.renderTime);
-          }
-        }
-      });
-    };
-
-    measureFrame();
-  }, []);
-
-  const measureApiLatency = useCallback(async () => {
-    const start = performance.now();
-    try {
-      // Mock API call - replace with actual health check endpoint
-      await fetch('/api/health', { method: 'HEAD' });
-      const end = performance.now();
-      const latency = end - start;
-      
-      setMetrics(prev => ({ ...prev, apiLatency: latency }));
-      
-      if (latency > thresholds.apiLatency) {
-        addAlert('warning', 'API response time is slow', 'apiLatency', latency, thresholds.apiLatency);
-      }
-    } catch (error) {
-      setMetrics(prev => ({ ...prev, errorRate: prev.errorRate + 1 }));
-      addAlert('error', 'API request failed', 'errorRate', metrics.errorRate + 1, thresholds.errorRate);
-    }
-  }, [metrics.errorRate]);
-
-  const addAlert = useCallback((
-    type: PerformanceAlert['type'], 
-    message: string, 
-    metric: keyof PerformanceMetrics, 
-    value: number, 
-    threshold: number
-  ) => {
-    const alert: PerformanceAlert = {
-      id: Date.now().toString(),
-      type,
-      message,
-      timestamp: new Date(),
-      metric,
-      value,
-      threshold
-    };
+  const collectMetrics = (): PerformanceMetrics => {
+    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
     
-    setAlerts(prev => [alert, ...prev.slice(0, 9)]); // Keep only last 10 alerts
-  }, []);
+    // Calculate page load time
+    const pageLoadTime = navigation.loadEventEnd - navigation.fetchStart;
+    
+    // Get memory usage (if available)
+    const memory = (performance as any).memory;
+    const memoryUsage = memory ? memory.usedJSHeapSize / 1024 / 1024 : 0;
 
-  const clearAlerts = useCallback(() => {
-    setAlerts([]);
-  }, []);
+    // Calculate render time (approximate)
+    const renderTime = navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart;
 
-  const startMonitoring = useCallback(() => {
+    // Simulate network latency measurement
+    const networkLatency = navigation.responseEnd - navigation.requestStart;
+
+    return {
+      pageLoadTime,
+      renderTime,
+      memoryUsage,
+      networkLatency,
+      errorCount: 0, // Will be updated by error tracking
+      timestamp: new Date()
+    };
+  };
+
+  const checkThresholds = (metric: PerformanceMetrics) => {
+    const newAlerts: PerformanceAlert[] = [];
+
+    if (metric.pageLoadTime > thresholds.pageLoadTime) {
+      newAlerts.push({
+        id: `alert-${Date.now()}-1`,
+        type: 'warning',
+        message: 'Page load time is slower than expected',
+        metric: 'pageLoadTime',
+        value: metric.pageLoadTime,
+        threshold: thresholds.pageLoadTime,
+        timestamp: new Date()
+      });
+    }
+
+    if (metric.renderTime > thresholds.renderTime) {
+      newAlerts.push({
+        id: `alert-${Date.now()}-2`,
+        type: 'warning',
+        message: 'Render time is slower than expected',
+        metric: 'renderTime',
+        value: metric.renderTime,
+        threshold: thresholds.renderTime,
+        timestamp: new Date()
+      });
+    }
+
+    if (metric.memoryUsage > thresholds.memoryUsage) {
+      newAlerts.push({
+        id: `alert-${Date.now()}-3`,
+        type: 'error',
+        message: 'Memory usage is higher than expected',
+        metric: 'memoryUsage',
+        value: metric.memoryUsage,
+        threshold: thresholds.memoryUsage,
+        timestamp: new Date()
+      });
+    }
+
+    if (metric.networkLatency > thresholds.networkLatency) {
+      newAlerts.push({
+        id: `alert-${Date.now()}-4`,
+        type: 'warning',
+        message: 'Network latency is higher than expected',
+        metric: 'networkLatency',
+        value: metric.networkLatency,
+        threshold: thresholds.networkLatency,
+        timestamp: new Date()
+      });
+    }
+
+    if (newAlerts.length > 0) {
+      setAlerts(prev => [...prev, ...newAlerts]);
+    }
+  };
+
+  const startMonitoring = () => {
     setIsMonitoring(true);
     
-    // Initial measurements
-    measureLoadTime();
-    measureMemoryUsage();
-    measureRenderTime();
-    
+    // Collect initial metrics
+    const initialMetrics = collectMetrics();
+    setMetrics([initialMetrics]);
+    checkThresholds(initialMetrics);
+
     // Set up periodic monitoring
     const interval = setInterval(() => {
-      measureMemoryUsage();
-      measureApiLatency();
-    }, 30000); // Check every 30 seconds
-    
+      const newMetrics = collectMetrics();
+      setMetrics(prev => [...prev.slice(-19), newMetrics]); // Keep last 20 metrics
+      checkThresholds(newMetrics);
+    }, 30000); // Every 30 seconds
+
     return () => {
       clearInterval(interval);
       setIsMonitoring(false);
     };
-  }, [measureLoadTime, measureMemoryUsage, measureRenderTime, measureApiLatency]);
+  };
 
-  const stopMonitoring = useCallback(() => {
-    setIsMonitoring(false);
-  }, []);
+  const clearAlerts = () => {
+    setAlerts([]);
+  };
 
-  const getPerformanceScore = useCallback(() => {
-    const scores = {
-      loadTime: Math.max(0, 100 - (metrics.loadTime / thresholds.loadTime) * 50),
-      memoryUsage: Math.max(0, 100 - (metrics.memoryUsage / thresholds.memoryUsage) * 50),
-      renderTime: Math.max(0, 100 - (metrics.renderTime / thresholds.renderTime) * 50),
-      apiLatency: Math.max(0, 100 - (metrics.apiLatency / thresholds.apiLatency) * 50),
-      errorRate: Math.max(0, 100 - (metrics.errorRate / thresholds.errorRate) * 20)
-    };
-    
-    const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.keys(scores).length;
-    return Math.round(totalScore);
-  }, [metrics, thresholds]);
-
-  const getOptimizationSuggestions = useCallback(() => {
-    const suggestions: string[] = [];
-    
-    if (metrics.loadTime > thresholds.loadTime) {
-      suggestions.push('Consider code splitting and lazy loading for better load times');
-    }
-    
-    if (metrics.memoryUsage > thresholds.memoryUsage) {
-      suggestions.push('Optimize memory usage by cleaning up event listeners and references');
-    }
-    
-    if (metrics.renderTime > thresholds.renderTime) {
-      suggestions.push('Use React.memo and useMemo for expensive computations');
-    }
-    
-    if (metrics.apiLatency > thresholds.apiLatency) {
-      suggestions.push('Implement API caching and request optimization');
-    }
-    
-    if (metrics.errorRate > thresholds.errorRate) {
-      suggestions.push('Add better error handling and retry mechanisms');
-    }
-    
-    return suggestions;
-  }, [metrics, thresholds]);
+  const dismissAlert = (alertId: string) => {
+    setAlerts(prev => prev.filter(alert => alert.id !== alertId));
+  };
 
   useEffect(() => {
+    // Start monitoring when component mounts
     const cleanup = startMonitoring();
-    return cleanup;
-  }, [startMonitoring]);
+    
+    // Track JavaScript errors
+    const errorHandler = (event: ErrorEvent) => {
+      setMetrics(prev => {
+        const latest = prev[prev.length - 1];
+        if (latest) {
+          return [...prev.slice(0, -1), { ...latest, errorCount: latest.errorCount + 1 }];
+        }
+        return prev;
+      });
+
+      setAlerts(prev => [...prev, {
+        id: `error-${Date.now()}`,
+        type: 'error',
+        message: `JavaScript Error: ${event.message}`,
+        metric: 'errorCount',
+        value: 1,
+        threshold: 0,
+        timestamp: new Date()
+      }]);
+    };
+
+    window.addEventListener('error', errorHandler);
+
+    return () => {
+      cleanup();
+      window.removeEventListener('error', errorHandler);
+    };
+  }, []);
 
   return {
     metrics,
     alerts,
     isMonitoring,
-    performanceScore: getPerformanceScore(),
-    optimizationSuggestions: getOptimizationSuggestions(),
     clearAlerts,
-    startMonitoring,
-    stopMonitoring,
-    thresholds
+    dismissAlert,
+    startMonitoring
   };
 };
