@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { screen, waitFor } from '@testing-library/dom';
-import { fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/dom';
 import { describe, test, expect, vi } from 'vitest';
 import { render } from '../testUtils';
 import OptimizedLeads from '../../pages/OptimizedLeads';
