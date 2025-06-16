@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
@@ -9,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import LeadScoring from '../components/LeadScoring';
 import LeadHeader from '../components/LeadHeader';
 import PersonalInfoTab from '../components/PersonalInfoTab';
-import KycTab from '../components/KycTab';
+import KycDocumentUpload from '../components/KycDocumentUpload';
 import BalanceTab from '../components/BalanceTab';
 import CommunicationsTab from '../components/CommunicationsTab';
 import AccountSummaryCard from '../components/AccountSummaryCard';
@@ -150,7 +149,11 @@ const LeadDetail: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="kyc" className="space-y-4">
-                <KycTab kycDocuments={kycDocuments} getStatusColor={getStatusColor} />
+                <KycDocumentUpload 
+                  leadId={lead.id}
+                  documents={kycDocuments}
+                  onDocumentUploaded={fetchLeadDetail}
+                />
               </TabsContent>
 
               <TabsContent value="balance" className="space-y-4">

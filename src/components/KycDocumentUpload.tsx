@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Upload, File, Check, X, Eye } from 'lucide-react';
+import { Upload, File, Check, X, Eye, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface KycDocument {
   id: string;
@@ -44,6 +45,7 @@ const KycDocumentUpload: React.FC<KycDocumentUploadProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const { user, profile } = useAuth();
+  const { toast } = useToast();
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -118,6 +120,11 @@ const KycDocumentUpload: React.FC<KycDocumentUploadProps> = ({
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
+      toast({
+        title: "Document uploaded successfully",
+        description: "The document has been uploaded for review.",
+      });
+
     } catch (err) {
       console.error('Upload error:', err);
       setError('An unexpected error occurred');
@@ -163,6 +170,11 @@ const KycDocumentUpload: React.FC<KycDocumentUploadProps> = ({
       }
 
       onDocumentUploaded(); // Refresh the documents list
+      
+      toast({
+        title: `Document ${action}d`,
+        description: `The document has been ${action}d successfully.`,
+      });
     } catch (err) {
       console.error('Error updating document:', err);
       setError('An unexpected error occurred');
@@ -177,7 +189,11 @@ const KycDocumentUpload: React.FC<KycDocumentUploadProps> = ({
 
       if (error) {
         console.error('Download error:', error);
-        setError('Failed to download document');
+        toast({
+          title: "Download failed",
+          description: "Failed to download document",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -186,11 +202,84 @@ const KycDocumentUpload: React.FC<KycDocumentUploadProps> = ({
       const a = document.createElement('a');
       a.href = url;
       a.download = fileName;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Download error:', err);
-      setError('Failed to download document');
+      toast({
+        title: "Download failed",
+        description: "Failed to download document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteDocument = async (docId: string, filePath: string) => {
+    if (profile?.role !== 'admin') return;
+
+    try {
+      // Delete from storage
+      if (filePath) {
+        const { error: storageError } = await supabase.storage
+          .from('kyc-documents')
+          .remove([filePath]);
+
+        if (storageError) {
+          console.error('Storage deletion error:', storageError);
+        }
+      }
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('kyc_documents')
+        .delete()
+        .eq('id', docId);
+
+      if (dbError) {
+        console.error('Database deletion error:', dbError);
+        setError('Failed to delete document');
+        return;
+      }
+
+      onDocumentUploaded(); // Refresh the documents list
+      
+      toast({
+        title: "Document deleted",
+        description: "The document has been deleted successfully.",
+      });
+    } catch (err) {
+      console.error('Delete error:', err);
+      setError('An unexpected error occurred');
+    }
+  };
+
+  const previewDocument = async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('kyc-documents')
+        .createSignedUrl(filePath, 60); // 1 minute expiry
+
+      if (error) {
+        console.error('Preview error:', error);
+        toast({
+          title: "Preview failed",
+          description: "Failed to generate preview URL",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Open in new tab
+      window.open(data.signedUrl, '_blank');
+    } catch (err) {
+      console.error('Preview error:', err);
+      toast({
+        title: "Preview failed",
+        description: "Failed to preview document",
+        variant: "destructive",
+      });
     }
   };
 
@@ -284,36 +373,63 @@ const KycDocumentUpload: React.FC<KycDocumentUploadProps> = ({
                       <span className="ml-1">{doc.status}</span>
                     </Badge>
 
-                    {doc.file_path && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => downloadDocument(doc.file_path!, `${doc.document_type}.pdf`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <div className="flex space-x-1">
+                      {doc.file_path && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => previewDocument(doc.file_path!)}
+                            title="Preview document"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => downloadDocument(doc.file_path!, `${doc.document_type}.pdf`)}
+                            title="Download document"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
 
-                    {profile?.role === 'admin' && doc.status === 'pending' && (
-                      <div className="flex space-x-1">
+                      {profile?.role === 'admin' && doc.status === 'pending' && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDocumentAction(doc.id, 'approve')}
+                            className="text-green-600 hover:text-green-700"
+                            title="Approve document"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDocumentAction(doc.id, 'reject')}
+                            className="text-red-600 hover:text-red-700"
+                            title="Reject document"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+
+                      {profile?.role === 'admin' && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDocumentAction(doc.id, 'approve')}
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDocumentAction(doc.id, 'reject')}
+                          onClick={() => deleteDocument(doc.id, doc.file_path!)}
                           className="text-red-600 hover:text-red-700"
+                          title="Delete document"
                         >
-                          <X className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
