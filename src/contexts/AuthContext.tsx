@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,10 +22,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
       if (data) {
-        // Ensure role is properly typed
+        // Ensure role and status are properly typed
         const profileData = {
           ...data,
-          role: data.role as 'admin' | 'agent'
+          role: data.role as 'admin' | 'agent',
+          status: data.status as 'active' | 'inactive'
         };
         setProfile(profileData);
       }

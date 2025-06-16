@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,8 @@ const EscalationRules: React.FC = () => {
   const { profiles } = useProfile();
   const { toast } = useToast();
 
-  const managers = profiles.filter(p => p.role === 'manager' || p.role === 'admin');
+  // Filter for admin users (managers/supervisors) instead of 'manager' role
+  const managers = profiles.filter(p => p.role === 'admin');
 
   const handleSaveRule = async () => {
     try {
@@ -211,7 +211,7 @@ const EscalationRules: React.FC = () => {
                             onValueChange={(value) => updateEscalationLevel(index, 'escalate_to', [value])}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select manager" />
+                              <SelectValue placeholder="Select admin" />
                             </SelectTrigger>
                             <SelectContent>
                               {managers.map((manager) => (

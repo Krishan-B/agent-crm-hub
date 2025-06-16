@@ -25,12 +25,12 @@ export const useWorkflowAutomation = () => {
 
       if (error) throw error;
       
-      // Cast the database types to our TypeScript types
+      // Safely cast the database types to our TypeScript types
       const rules = (data || []).map(rule => ({
         ...rule,
         type: rule.type as WorkflowRule['type'],
-        conditions: rule.conditions as WorkflowRule['conditions'],
-        actions: rule.actions as WorkflowRule['actions']
+        conditions: Array.isArray(rule.conditions) ? rule.conditions as WorkflowRule['conditions'] : [],
+        actions: Array.isArray(rule.actions) ? rule.actions as WorkflowRule['actions'] : []
       }));
       
       setWorkflowRules(rules);
@@ -169,7 +169,7 @@ export const useWorkflowAutomation = () => {
 
       if (error) throw error;
       
-      // Cast the database types to our TypeScript types
+      // Safely cast the database types to our TypeScript types
       const reminders = (data || []).map(reminder => ({
         ...reminder,
         reminder_type: reminder.reminder_type as FollowUpReminder['reminder_type'],
@@ -233,10 +233,10 @@ export const useWorkflowAutomation = () => {
 
       if (error) throw error;
       
-      // Cast the database types to our TypeScript types
+      // Safely cast the database types to our TypeScript types
       const rules = (data || []).map(rule => ({
         ...rule,
-        escalation_levels: rule.escalation_levels as EscalationRule['escalation_levels']
+        escalation_levels: Array.isArray(rule.escalation_levels) ? rule.escalation_levels as EscalationRule['escalation_levels'] : []
       }));
       
       setEscalationRules(rules);
