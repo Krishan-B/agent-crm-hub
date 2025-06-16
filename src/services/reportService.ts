@@ -1,15 +1,22 @@
 
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { Lead } from '../hooks/useOptimizedLeads';
 import { AnalyticsSnapshot } from '../hooks/useAnalytics';
 
-// Extend jsPDF with autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
+// Extend jsPDF with autoTable - using any type to avoid import issues
+declare global {
+  interface Window {
+    jsPDF: any;
   }
+}
+
+// Import autoTable plugin directly
+import 'jspdf-autotable';
+
+// Extend jsPDF instance with autoTable method
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: any) => jsPDF;
 }
 
 export interface ReportConfig {
@@ -42,7 +49,7 @@ export interface ReportData {
 class ReportService {
   generatePDFReport(config: ReportConfig, data: ReportData): Promise<Blob> {
     return new Promise((resolve) => {
-      const doc = new jsPDF();
+      const doc = new jsPDF() as jsPDFWithAutoTable;
       
       // Header
       doc.setFontSize(20);
