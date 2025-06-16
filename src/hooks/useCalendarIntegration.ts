@@ -43,7 +43,14 @@ export const useCalendarIntegration = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      setIntegrations(data || []);
+      
+      // Type cast the data to ensure proper typing
+      const typedIntegrations = (data || []).map(item => ({
+        ...item,
+        provider: item.provider as 'google' | 'outlook'
+      }));
+      
+      setIntegrations(typedIntegrations);
     } catch (err) {
       console.error('Error fetching calendar integrations:', err);
       setError('Failed to fetch calendar integrations');

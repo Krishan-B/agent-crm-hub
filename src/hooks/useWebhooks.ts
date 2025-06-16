@@ -47,7 +47,16 @@ export const useWebhooks = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWebhooks(data || []);
+      
+      // Type cast the data to ensure proper typing
+      const typedWebhooks = (data || []).map(item => ({
+        ...item,
+        headers: typeof item.headers === 'object' && item.headers !== null 
+          ? item.headers as Record<string, string>
+          : {}
+      }));
+      
+      setWebhooks(typedWebhooks);
     } catch (err) {
       console.error('Error fetching webhooks:', err);
       setError('Failed to fetch webhooks');
