@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,7 @@ import Leads from "./pages/Leads";
 import LeadDetail from "./pages/LeadDetail";
 import Calendar from "./pages/Calendar";
 import Communications from "./pages/Communications";
+import EmailTemplates from "./pages/EmailTemplates";
 import UserManagement from "./pages/UserManagement";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -57,6 +59,11 @@ const App = () => (
             <Route path="/communications" element={
               <ProtectedRoute>
                 <Communications />
+              </ProtectedRoute>
+            } />
+            <Route path="/email-templates" element={
+              <ProtectedRoute>
+                <EmailTemplates />
               </ProtectedRoute>
             } />
             <Route path="/users" element={

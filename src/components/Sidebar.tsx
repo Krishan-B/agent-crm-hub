@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Users, Calendar, User, Bell, BarChart3 } from 'lucide-react';
+import { Users, Calendar, User, Bell, BarChart3, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +13,7 @@ const Sidebar: React.FC = () => {
     { name: 'Leads', href: '/leads', icon: Users },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Communications', href: '/communications', icon: Bell },
+    { name: 'Email Templates', href: '/email-templates', icon: Mail },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   ];
 
