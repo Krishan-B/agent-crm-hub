@@ -29,8 +29,8 @@ export const useWorkflowAutomation = () => {
       const rules = (data || []).map(rule => ({
         ...rule,
         type: rule.type as WorkflowRule['type'],
-        conditions: Array.isArray(rule.conditions) ? rule.conditions as WorkflowRule['conditions'] : [],
-        actions: Array.isArray(rule.actions) ? rule.actions as WorkflowRule['actions'] : []
+        conditions: Array.isArray(rule.conditions) ? rule.conditions as unknown as WorkflowRule['conditions'] : [],
+        actions: Array.isArray(rule.actions) ? rule.actions as unknown as WorkflowRule['actions'] : []
       }));
       
       setWorkflowRules(rules);
@@ -236,7 +236,7 @@ export const useWorkflowAutomation = () => {
       // Safely cast the database types to our TypeScript types
       const rules = (data || []).map(rule => ({
         ...rule,
-        escalation_levels: Array.isArray(rule.escalation_levels) ? rule.escalation_levels as EscalationRule['escalation_levels'] : []
+        escalation_levels: Array.isArray(rule.escalation_levels) ? rule.escalation_levels as unknown as EscalationRule['escalation_levels'] : []
       }));
       
       setEscalationRules(rules);
