@@ -66,16 +66,30 @@ class Cache {
       }
     }
   }
+
+  // Add pattern-based invalidation
+  invalidateByPattern(pattern: string): void {
+    const regex = new RegExp(pattern);
+    for (const key of this.storage.keys()) {
+      if (regex.test(key)) {
+        this.storage.delete(key);
+      }
+    }
+  }
 }
 
 // Global cache instances
 export const dataCache = new Cache();
 export const searchCache = new Cache();
 export const userCache = new Cache();
+export const leadsCache = new Cache();
+export const dashboardCache = new Cache();
 
 // Auto cleanup every 5 minutes
 setInterval(() => {
   dataCache.cleanup();
   searchCache.cleanup();
   userCache.cleanup();
+  leadsCache.cleanup();
+  dashboardCache.cleanup();
 }, 5 * 60 * 1000);

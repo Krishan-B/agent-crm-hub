@@ -107,11 +107,11 @@ export const RealTimeCommunications: React.FC<RealTimeCommunicationsProps> = ({
     setMessages(prev => [...prev, message]);
     setNewMessage('');
 
-    // Save message to database
+    // Save message to database using 'note' type instead of 'chat'
     try {
       await supabase.from('communications').insert({
         lead_id: leadId,
-        type: 'chat',
+        type: 'note',
         content: newMessage,
         status: 'sent',
         created_by: user.id

@@ -94,7 +94,7 @@ export const useOptimizedLeads = () => {
     // For search, check cache first
     if (filters.search) {
       const searchKey = `search_${filters.search}`;
-      const cached = searchCache.get(searchKey);
+      const cached = searchCache.get<Lead[]>(searchKey);
       if (cached) {
         return cached;
       }
