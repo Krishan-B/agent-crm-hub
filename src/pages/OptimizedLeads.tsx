@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { useOptimizedLeads, BulkAction } from '../hooks/useOptimizedLeads';
+import { useOptimizedLeads, BulkAction, Lead } from '../hooks/useOptimizedLeads';
 import { VirtualizedLeadsTable } from '../components/VirtualizedLeadsTable';
 import { useIntersectionObserver } from '../hooks/useLazyLoading';
 import { OptimizedLeadsHeader } from '../components/optimized-leads/OptimizedLeadsHeader';
@@ -47,7 +47,7 @@ const OptimizedLeads: React.FC = () => {
   );
 
   const handleSelectAll = (checked: boolean) => {
-    const currentLeads = viewMode === 'infinite' ? lazyLeads : leads;
+    const currentLeads: Lead[] = viewMode === 'infinite' ? lazyLeads : leads;
     if (checked) {
       setSelectedLeads(currentLeads.map(lead => lead.id));
     } else {
@@ -93,7 +93,7 @@ const OptimizedLeads: React.FC = () => {
     );
   }
 
-  const currentLeads = viewMode === 'infinite' ? lazyLeads : leads;
+  const currentLeads: Lead[] = viewMode === 'infinite' ? lazyLeads : leads;
 
   return (
     <Layout>

@@ -20,6 +20,11 @@ export interface RecentLead {
   country: string;
 }
 
+interface CachedDashboardData {
+  stats: DashboardStats;
+  recentLeads: RecentLead[];
+}
+
 export const useDashboardStats = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalLeads: 0,
@@ -37,7 +42,7 @@ export const useDashboardStats = () => {
     
     // Check cache first
     const cacheKey = `dashboard_stats_${user.id}`;
-    const cached = dashboardCache.get(cacheKey);
+    const cached = dashboardCache.get<CachedDashboardData>(cacheKey);
     if (cached) {
       setStats(cached.stats);
       setRecentLeads(cached.recentLeads);
@@ -108,7 +113,7 @@ export const useDashboardStats = () => {
       setRecentLeads(formattedRecentLeads);
 
       // Cache the results
-      dashboardCache.set(cacheKey, {
+      dashboardCache.set<CachedDashboardData>(cacheKey, {
         stats: newStats,
         recentLeads: formattedRecentLeads
       });

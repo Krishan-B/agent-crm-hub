@@ -154,8 +154,8 @@ export const useOptimizedLeads = () => {
     performBulkAction,
     exportToCSV: () => exportToCSV(filteredLeads),
     
-    // Lazy loading mode
-    lazyLeads,
+    // Lazy loading mode - ensure proper typing
+    lazyLeads: lazyLeads as Lead[],
     hasMore,
     loadMore,
     resetLazy,
