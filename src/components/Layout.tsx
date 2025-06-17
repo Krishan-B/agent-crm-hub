@@ -3,26 +3,25 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
+import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 
 const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const isMobile = useIsMobile();
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className={cn(
-          "flex-1 p-4 sm:p-6",
-          !isMobile && "md:ml-64"
-        )}>
+    <div className="min-h-screen flex w-full">
+      <Sidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2">
+          <div className="flex items-center gap-2 px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Header />
+          </div>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           <div className="max-w-full overflow-x-auto">
             {children || <Outlet />}
           </div>
-        </main>
-      </div>
+        </div>
+      </SidebarInset>
     </div>
   );
 };
