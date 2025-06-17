@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import AnalyticsReport from '../components/AnalyticsReport';
+import AdvancedAnalytics from '../components/analytics/AdvancedAnalytics';
 
 const Analytics: React.FC = () => {
   return (
@@ -17,11 +18,16 @@ const Analytics: React.FC = () => {
         <Tabs defaultValue="dashboard" className="space-y-4">
           <TabsList>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="reports">Advanced Reports</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced Analytics</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-4">
             <AnalyticsDashboard />
+          </TabsContent>
+
+          <TabsContent value="advanced" className="space-y-4">
+            <AdvancedAnalytics />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">

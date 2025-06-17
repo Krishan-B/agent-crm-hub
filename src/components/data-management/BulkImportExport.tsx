@@ -1,193 +1,115 @@
+
 import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Upload, Download, FileText, AlertTriangle, CheckCircle, X } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { useBulkOperations } from '../../hooks/useBulkOperations';
 import { useDuplicateDetection } from '../../hooks/useDuplicateDetection';
-import { useDataValidation } from '../../hooks/useDataValidation';
-
-interface ImportResult {
-  total: number;
-  successful: number;
-  failed: number;
-  duplicates: number;
-  errors: Array<{ row: number; error: string; data: any }>;
-}
+import { useToast } from '@/hooks/use-toast';
 
 export const BulkImportExport: React.FC = () => {
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importProgress, setImportProgress] = useState(0);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [duplicateHandling, setDuplicateHandling] = useState<'skip' | 'update' | 'create'>('skip');
-  const [validationMode, setValidationMode] = useState<'strict' | 'relaxed'>('strict');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importMode, setImportMode] = useState<'create' | 'update'>('create');
+  const [importResult, setImportResult] = useState<any>(null);
+  const [duplicateResults, setDuplicateResults] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { importLeads, exportLeads, isExporting, exportProgress } = useBulkOperations();
+  const { detectDuplicates, resolveDuplicate, isDetecting } = useDuplicateDetection();
   const { toast } = useToast();
-
-  const { 
-    importLeads, 
-    exportLeads, 
-    isExporting, 
-    exportProgress 
-  } = useBulkOperations();
-  
-  const { 
-    detectDuplicates, 
-    duplicateResults 
-  } = useDuplicateDetection();
-  
-  const { 
-    validateLeadsData, 
-    validationErrors 
-  } = useDataValidation();
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-        toast({
-          title: "Invalid file type",
-          description: "Please select a CSV file.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast({
-          title: "File too large",
-          description: "File size must be less than 10MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      setImportFile(file);
+      setSelectedFile(file);
       setImportResult(null);
+      setDuplicateResults(null);
     }
   };
 
-  const parseCSV = async (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const text = e.target?.result as string;
-          const lines = text.split('\n');
-          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-          
-          const data = lines.slice(1)
-            .filter(line => line.trim())
-            .map((line, index) => {
-              const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-              const obj: any = {};
-              headers.forEach((header, i) => {
-                obj[header] = values[i] || '';
-              });
-              obj._rowNumber = index + 2; // +2 because we start from row 2 (after header)
-              return obj;
-            });
-          
-          resolve(data);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsText(file);
-    });
+  const parseCSV = (text: string) => {
+    const lines = text.split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const data = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim()) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+        const row: any = { _rowNumber: i + 1 };
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        data.push(row);
+      }
+    }
+
+    return data;
   };
 
   const handleImport = async () => {
-    if (!importFile) return;
-
-    setIsImporting(true);
-    setImportProgress(0);
-    setImportResult(null);
+    if (!selectedFile) return;
 
     try {
-      // Parse CSV
-      const rawData = await parseCSV(importFile);
-      setImportProgress(10);
+      const text = await selectedFile.text();
+      const data = parseCSV(text);
 
-      // Validate data
-      const validationResult = await validateLeadsData(rawData, validationMode);
-      setImportProgress(30);
+      // Detect duplicates first
+      const duplicateDetectionResult = await detectDuplicates(data);
+      setDuplicateResults(duplicateDetectionResult);
 
-      if (validationResult.hasErrors && validationMode === 'strict') {
-        setImportResult({
-          total: rawData.length,
-          successful: 0,
-          failed: rawData.length,
-          duplicates: 0,
-          errors: validationResult.errors
+      if (duplicateDetectionResult.duplicates.length > 0) {
+        toast({
+          title: "Duplicates Detected",
+          description: `Found ${duplicateDetectionResult.duplicates.length} potential duplicates. Please review them before proceeding.`,
+          variant: "destructive",
         });
-        setIsImporting(false);
         return;
       }
 
-      // Detect duplicates
-      const duplicateResult = await detectDuplicates(validationResult.validData);
-      setImportProgress(50);
-
-      // Process data based on duplicate handling
-      let dataToImport = validationResult.validData;
-      let duplicateCount = 0;
-
-      if (duplicateResult.duplicates.length > 0) {
-        duplicateCount = duplicateResult.duplicates.length;
-        
-        if (duplicateHandling === 'skip') {
-          dataToImport = validationResult.validData.filter(
-            item => !duplicateResult.duplicates.some(dup => dup.newRecord.email === item.email)
-          );
-        } else if (duplicateHandling === 'update') {
-          // Handle updates separately
-          for (const duplicate of duplicateResult.duplicates) {
-            await importLeads([duplicate.newRecord], 'update');
-          }
-          dataToImport = validationResult.validData.filter(
-            item => !duplicateResult.duplicates.some(dup => dup.newRecord.email === item.email)
-          );
-        }
-        // For 'create', we keep all data
-      }
-
-      setImportProgress(70);
-
-      // Import data
-      const importResult = await importLeads(dataToImport, 'create');
-      setImportProgress(100);
-
-      setImportResult({
-        total: rawData.length,
-        successful: importResult.successful + (duplicateHandling === 'update' ? duplicateCount : 0),
-        failed: validationResult.errors.length + importResult.failed,
-        duplicates: duplicateHandling === 'skip' ? duplicateCount : 0,
-        errors: [...validationResult.errors, ...importResult.errors]
-      });
+      // If no duplicates, proceed with import
+      const result = await importLeads(duplicateDetectionResult.unique, importMode);
+      setImportResult(result);
 
       toast({
-        title: "Import completed",
-        description: `Successfully imported ${importResult.successful} leads.`,
+        title: "Import Complete",
+        description: `Successfully imported ${result.successful} leads. ${result.failed} failed.`,
       });
-
     } catch (error) {
       console.error('Import error:', error);
       toast({
-        title: "Import failed",
-        description: "An error occurred during import.",
+        title: "Import Failed",
+        description: "Failed to import leads. Please check your file format.",
         variant: "destructive",
       });
-    } finally {
-      setIsImporting(false);
+    }
+  };
+
+  const handleDuplicateResolution = async (duplicate: any, action: 'merge' | 'keep_new' | 'keep_existing') => {
+    try {
+      await resolveDuplicate(duplicate, action);
+      
+      // Remove resolved duplicate from results
+      setDuplicateResults((prev: any) => ({
+        ...prev,
+        duplicates: prev.duplicates.filter((d: any) => d !== duplicate)
+      }));
+
+      toast({
+        title: "Duplicate Resolved",
+        description: `Duplicate has been ${action === 'merge' ? 'merged' : action === 'keep_new' ? 'replaced with new data' : 'kept unchanged'}.`,
+      });
+    } catch (error) {
+      console.error('Error resolving duplicate:', error);
+      toast({
+        title: "Error",
+        description: "Failed to resolve duplicate.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -195,19 +117,18 @@ export const BulkImportExport: React.FC = () => {
     try {
       await exportLeads({
         format: 'csv',
-        includeArchived: false,
-        filters: {}
+        includeArchived: false
       });
-      
+
       toast({
-        title: "Export completed",
-        description: "Leads have been exported successfully.",
+        title: "Export Started",
+        description: "Your export will download shortly.",
       });
     } catch (error) {
       console.error('Export error:', error);
       toast({
-        title: "Export failed",
-        description: "An error occurred during export.",
+        title: "Export Failed",
+        description: "Failed to export leads.",
         variant: "destructive",
       });
     }
@@ -215,150 +136,191 @@ export const BulkImportExport: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Import Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Bulk Import
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Duplicate Handling</label>
-              <Select value={duplicateHandling} onValueChange={(value: any) => setDuplicateHandling(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="skip">Skip duplicates</SelectItem>
-                  <SelectItem value="update">Update existing</SelectItem>
-                  <SelectItem value="create">Create anyway</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Validation Mode</label>
-              <Select value={validationMode} onValueChange={(value: any) => setValidationMode(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="strict">Strict (reject on errors)</SelectItem>
-                  <SelectItem value="relaxed">Relaxed (skip invalid rows)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <Tabs defaultValue="import" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="import">Import Leads</TabsTrigger>
+          <TabsTrigger value="export">Export Leads</TabsTrigger>
+        </TabsList>
 
-          <div>
-            <Input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileSelect}
-              className="mb-2"
-            />
-            <p className="text-sm text-gray-500">
-              Upload a CSV file with columns: first_name, last_name, email, phone, country, status
-            </p>
-          </div>
-
-          {importFile && (
-            <Alert>
-              <FileText className="h-4 w-4" />
-              <AlertDescription>
-                Selected file: {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {isImporting && (
-            <div>
-              <Progress value={importProgress} className="mb-2" />
-              <p className="text-sm text-gray-500">Importing... {importProgress}%</p>
-            </div>
-          )}
-
-          <Button 
-            onClick={handleImport} 
-            disabled={!importFile || isImporting}
-            className="w-full"
-          >
-            {isImporting ? 'Importing...' : 'Import Leads'}
-          </Button>
-
-          {importResult && (
-            <div className="space-y-3">
-              <Separator />
-              <h4 className="font-medium">Import Results</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{importResult.total}</div>
-                  <div className="text-sm text-gray-500">Total</div>
+        <TabsContent value="import" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Import Leads
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="file">CSV File</Label>
+                  <Input
+                    ref={fileInputRef}
+                    id="file"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileSelect}
+                  />
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{importResult.successful}</div>
-                  <div className="text-sm text-gray-500">Successful</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">{importResult.failed}</div>
-                  <div className="text-sm text-gray-500">Failed</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-600">{importResult.duplicates}</div>
-                  <div className="text-sm text-gray-500">Duplicates</div>
+                <div>
+                  <Label htmlFor="mode">Import Mode</Label>
+                  <Select value={importMode} onValueChange={(value: 'create' | 'update') => setImportMode(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="create">Create New Leads</SelectItem>
+                      <SelectItem value="update">Update Existing Leads</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              {importResult.errors.length > 0 && (
-                <div>
-                  <h5 className="font-medium text-red-600 mb-2">Errors ({importResult.errors.length})</h5>
-                  <div className="max-h-40 overflow-y-auto space-y-1">
-                    {importResult.errors.slice(0, 10).map((error, index) => (
-                      <div key={index} className="text-sm bg-red-50 p-2 rounded">
-                        <span className="font-medium">Row {error.row}:</span> {error.error}
-                      </div>
-                    ))}
-                    {importResult.errors.length > 10 && (
-                      <div className="text-sm text-gray-500">
-                        And {importResult.errors.length - 10} more errors...
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              <Button 
+                onClick={handleImport} 
+                disabled={!selectedFile || isDetecting}
+                className="w-full"
+              >
+                {isDetecting ? 'Detecting Duplicates...' : 'Import Leads'}
+              </Button>
 
-      {/* Export Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            Bulk Export
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isExporting && (
-            <div className="mb-4">
-              <Progress value={exportProgress} className="mb-2" />
-              <p className="text-sm text-gray-500">Exporting... {exportProgress}%</p>
-            </div>
-          )}
-          
-          <Button 
-            onClick={handleExport} 
-            disabled={isExporting}
-            className="w-full"
-          >
-            {isExporting ? 'Exporting...' : 'Export All Leads'}
-          </Button>
-        </CardContent>
-      </Card>
+              {duplicateResults && duplicateResults.duplicates.length > 0 && (
+                <Card className="border-yellow-200 bg-yellow-50">
+                  <CardHeader>
+                    <CardTitle className="text-yellow-800 flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5" />
+                      Duplicate Detection Results
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {duplicateResults.duplicates.map((duplicate: any, index: number) => (
+                        <div key={index} className="border rounded-lg p-4 bg-white">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <h4 className="font-medium">Potential Duplicate Found</h4>
+                              <p className="text-sm text-gray-600">
+                                Confidence: {Math.round(duplicate.confidence * 100)}%
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Matching fields: {duplicate.matchFields.join(', ')}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <h5 className="font-medium text-green-700">Existing Record</h5>
+                              <p>Name: {duplicate.existingRecord.first_name} {duplicate.existingRecord.last_name}</p>
+                              <p>Email: {duplicate.existingRecord.email}</p>
+                              <p>Phone: {duplicate.existingRecord.phone}</p>
+                            </div>
+                            <div>
+                              <h5 className="font-medium text-blue-700">New Record</h5>
+                              <p>Name: {duplicate.newRecord.first_name} {duplicate.newRecord.last_name}</p>
+                              <p>Email: {duplicate.newRecord.email}</p>
+                              <p>Phone: {duplicate.newRecord.phone}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 mt-4">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDuplicateResolution(duplicate, 'merge')}
+                            >
+                              Merge
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDuplicateResolution(duplicate, 'keep_new')}
+                            >
+                              Keep New
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDuplicateResolution(duplicate, 'keep_existing')}
+                            >
+                              Keep Existing
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {importResult && (
+                <Alert className={importResult.failed > 0 ? "border-yellow-500" : "border-green-500"}>
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Import completed: {importResult.successful} successful, {importResult.failed} failed
+                    {importResult.errors.length > 0 && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer">View Errors</summary>
+                        <div className="mt-2 space-y-1">
+                          {importResult.errors.slice(0, 5).map((error: any, index: number) => (
+                            <div key={index} className="text-sm text-red-600">
+                              Row {error.row}: {error.error}
+                            </div>
+                          ))}
+                          {importResult.errors.length > 5 && (
+                            <div className="text-sm text-gray-500">
+                              And {importResult.errors.length - 5} more errors...
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="export" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-5 w-5" />
+                Export Leads
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <Alert>
+                  <FileText className="h-4 w-4" />
+                  <AlertDescription>
+                    Export all lead data including contact information, status, balances, and assigned agents.
+                  </AlertDescription>
+                </Alert>
+
+                {isExporting && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Exporting...</span>
+                      <span>{exportProgress}%</span>
+                    </div>
+                    <Progress value={exportProgress} className="w-full" />
+                  </div>
+                )}
+
+                <Button 
+                  onClick={handleExport} 
+                  disabled={isExporting}
+                  className="w-full"
+                >
+                  {isExporting ? 'Exporting...' : 'Export to CSV'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

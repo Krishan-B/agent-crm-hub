@@ -5,94 +5,77 @@ interface CacheItem<T> {
   ttl: number;
 }
 
-class Cache<T> {
-  private cache = new Map<string, CacheItem<T>>();
-  private defaultTTL: number;
+class Cache {
+  private storage: Map<string, CacheItem<any>> = new Map();
 
-  constructor(defaultTTL = 5 * 60 * 1000) { // 5 minutes default
-    this.defaultTTL = defaultTTL;
-  }
-
-  set(key: string, data: T, ttl?: number): void {
-    this.cache.set(key, {
+  set<T>(key: string, data: T, ttl: number = 5 * 60 * 1000): void { // 5 minutes default
+    this.storage.set(key, {
       data,
       timestamp: Date.now(),
-      ttl: ttl || this.defaultTTL,
+      ttl
     });
   }
 
-  get(key: string): T | null {
-    const item = this.cache.get(key);
-    if (!item) return null;
+  get<T>(key: string): T | null {
+    const item = this.storage.get(key);
+    
+    if (!item) {
+      return null;
+    }
 
-    if (Date.now() - item.timestamp > item.ttl) {
-      this.cache.delete(key);
+    const now = Date.now();
+    if (now - item.timestamp > item.ttl) {
+      this.storage.delete(key);
       return null;
     }
 
     return item.data;
   }
 
-  has(key: string): boolean {
-    return this.get(key) !== null;
-  }
-
   delete(key: string): void {
-    this.cache.delete(key);
+    this.storage.delete(key);
   }
 
   clear(): void {
-    this.cache.clear();
+    this.storage.clear();
   }
 
-  invalidateByPattern(pattern: string): void {
-    const regex = new RegExp(pattern);
-    for (const key of this.cache.keys()) {
-      if (regex.test(key)) {
-        this.cache.delete(key);
+  has(key: string): boolean {
+    const item = this.storage.get(key);
+    if (!item) return false;
+
+    const now = Date.now();
+    if (now - item.timestamp > item.ttl) {
+      this.storage.delete(key);
+      return false;
+    }
+
+    return true;
+  }
+
+  size(): number {
+    return this.storage.size;
+  }
+
+  // Clean up expired items
+  cleanup(): void {
+    const now = Date.now();
+    for (const [key, item] of this.storage.entries()) {
+      if (now - item.timestamp > item.ttl) {
+        this.storage.delete(key);
       }
     }
   }
 }
 
-// Create singleton instances for different data types
-export const leadsCache = new Cache<any>(10 * 60 * 1000); // 10 minutes
-export const dashboardCache = new Cache<any>(5 * 60 * 1000); // 5 minutes
-export const analyticsCache = new Cache<any>(15 * 60 * 1000); // 15 minutes
+// Global cache instances
+export const dataCache = new Cache();
+export const searchCache = new Cache();
+export const userCache = new Cache();
 
-// Memory-based LRU cache for frequently accessed data
-class LRUCache<T> {
-  private cache = new Map<string, T>();
-  private maxSize: number;
-
-  constructor(maxSize = 100) {
-    this.maxSize = maxSize;
-  }
-
-  get(key: string): T | undefined {
-    const value = this.cache.get(key);
-    if (value !== undefined) {
-      // Move to end (most recently used)
-      this.cache.delete(key);
-      this.cache.set(key, value);
-    }
-    return value;
-  }
-
-  set(key: string, value: T): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.maxSize) {
-      // Remove least recently used (first item)
-      const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
-    }
-    this.cache.set(key, value);
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-}
-
-export const searchCache = new LRUCache<any>(50);
+// Auto cleanup every 5 minutes
+setInterval(() => {
+  dataCache.cleanup();
+  searchCache.cleanup();
+  userCache.cleanup();
+}, 5 * 60 * 1000);

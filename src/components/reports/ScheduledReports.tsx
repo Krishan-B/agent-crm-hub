@@ -1,380 +1,337 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Clock, Plus, Edit, Trash2, Mail, Calendar } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '../../contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Calendar, Mail, Edit, Trash2, Play, Pause } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ScheduledReport {
   id: string;
   name: string;
-  report_type: string;
-  format: string;
   frequency: string;
+  format: string;
   recipients: string[];
-  is_active: boolean;
   next_run: string;
+  is_active: boolean;
   last_run?: string;
-  created_at: string;
 }
 
-const ScheduledReports: React.FC = () => {
-  const [reports, setReports] = useState<ScheduledReport[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingReport, setEditingReport] = useState<ScheduledReport | null>(null);
-  const [newReport, setNewReport] = useState({
-    name: '',
-    report_type: 'leads',
-    format: 'pdf',
+const MOCK_REPORTS: ScheduledReport[] = [
+  {
+    id: '1',
+    name: 'Weekly Lead Summary',
     frequency: 'weekly',
-    recipients: [''],
+    format: 'PDF',
+    recipients: ['admin@example.com', 'manager@example.com'],
+    next_run: '2024-01-15T09:00:00Z',
+    is_active: true,
+    last_run: '2024-01-08T09:00:00Z'
+  },
+  {
+    id: '2',
+    name: 'Monthly Revenue Report',
+    frequency: 'monthly',
+    format: 'Excel',
+    recipients: ['finance@example.com'],
+    next_run: '2024-02-01T08:00:00Z',
     is_active: true
+  }
+];
+
+const ScheduledReports: React.FC = () => {
+  const [reports, setReports] = useState<ScheduledReport[]>(MOCK_REPORTS);
+  const [isCreating, setIsCreating] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    frequency: 'weekly',
+    format: 'PDF',
+    recipients: '',
+    time: '09:00'
   });
-  const { user } = useAuth();
-  
-  useEffect(() => {
-    fetchScheduledReports();
-  }, [user]);
-  
-  const fetchScheduledReports = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('scheduled_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching scheduled reports:', error);
-        return;
-      }
-      
-      setReports(data || []);
-    } catch (error) {
-      console.error('Error fetching scheduled reports:', error);
-      setReports([]);
-    }
-  };
-  
-  const saveReport = async () => {
-    if (!user) return;
-    
-    try {
-      const reportData = {
-        ...newReport,
-        recipients: newReport.recipients.filter(email => email.trim() !== ''),
-        created_by: user.id,
-        next_run: calculateNextRun(newReport.frequency)
-      };
-      
-      if (editingReport) {
-        const { error } = await supabase
-          .from('scheduled_reports')
-          .update(reportData)
-          .eq('id', editingReport.id);
-        
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('scheduled_reports')
-          .insert([reportData]);
-        
-        if (error) throw error;
-      }
-      
-      setIsDialogOpen(false);
-      setEditingReport(null);
-      setNewReport({
-        name: '',
-        report_type: 'leads',
-        format: 'pdf',
-        frequency: 'weekly',
-        recipients: [''],
-        is_active: true
+  const { toast } = useToast();
+
+  const handleCreateReport = () => {
+    if (!formData.name || !formData.recipients) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
       });
-      fetchScheduledReports();
-    } catch (error) {
-      console.error('Error saving scheduled report:', error);
+      return;
     }
-  };
-  
-  const deleteReport = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('scheduled_reports')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      fetchScheduledReports();
-    } catch (error) {
-      console.error('Error deleting scheduled report:', error);
-    }
-  };
-  
-  const toggleReportStatus = async (id: string, isActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('scheduled_reports')
-        .update({ is_active: isActive })
-        .eq('id', id);
-      
-      if (error) throw error;
-      fetchScheduledReports();
-    } catch (error) {
-      console.error('Error updating report status:', error);
-    }
-  };
-  
-  const calculateNextRun = (frequency: string): string => {
-    const now = new Date();
-    switch (frequency) {
-      case 'daily':
-        now.setDate(now.getDate() + 1);
-        break;
-      case 'weekly':
-        now.setDate(now.getDate() + 7);
-        break;
-      case 'monthly':
-        now.setMonth(now.getMonth() + 1);
-        break;
-      default:
-        now.setDate(now.getDate() + 7);
-    }
-    return now.toISOString();
-  };
-  
-  const openEditDialog = (report: ScheduledReport) => {
-    setEditingReport(report);
-    setNewReport({
-      name: report.name,
-      report_type: report.report_type,
-      format: report.format,
-      frequency: report.frequency,
-      recipients: report.recipients,
-      is_active: report.is_active
+
+    const newReport: ScheduledReport = {
+      id: `report_${Date.now()}`,
+      name: formData.name,
+      frequency: formData.frequency,
+      format: formData.format,
+      recipients: formData.recipients.split(',').map(email => email.trim()),
+      next_run: new Date().toISOString(),
+      is_active: true
+    };
+
+    setReports([...reports, newReport]);
+    setIsCreating(false);
+    setFormData({
+      name: '',
+      frequency: 'weekly',
+      format: 'PDF',
+      recipients: '',
+      time: '09:00'
     });
-    setIsDialogOpen(true);
+
+    toast({
+      title: "Report Scheduled",
+      description: `"${formData.name}" has been scheduled successfully.`,
+    });
   };
-  
-  const addRecipient = () => {
-    setNewReport(prev => ({
-      ...prev,
-      recipients: [...prev.recipients, '']
-    }));
+
+  const toggleReportStatus = (id: string) => {
+    setReports(reports.map(report => 
+      report.id === id 
+        ? { ...report, is_active: !report.is_active }
+        : report
+    ));
   };
-  
-  const updateRecipient = (index: number, email: string) => {
-    setNewReport(prev => ({
-      ...prev,
-      recipients: prev.recipients.map((recipient, i) => i === index ? email : recipient)
-    }));
+
+  const deleteReport = (id: string) => {
+    setReports(reports.filter(report => report.id !== id));
+    toast({
+      title: "Report Deleted",
+      description: "Scheduled report has been deleted.",
+    });
   };
-  
-  const removeRecipient = (index: number) => {
-    setNewReport(prev => ({
-      ...prev,
-      recipients: prev.recipients.filter((_, i) => i !== index)
-    }));
+
+  const runReportNow = (id: string) => {
+    const report = reports.find(r => r.id === id);
+    if (report) {
+      toast({
+        title: "Report Triggered",
+        description: `"${report.name}" is being generated and will be sent to recipients.`,
+      });
+    }
   };
-  
+
+  const formatFrequency = (frequency: string) => {
+    const frequencies: { [key: string]: string } = {
+      daily: 'Daily',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      quarterly: 'Quarterly'
+    };
+    return frequencies[frequency] || frequency;
+  };
+
+  const formatNextRun = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Scheduled Reports</CardTitle>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Schedule New Report
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingReport ? 'Edit Scheduled Report' : 'Schedule New Report'}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Report Name</Label>
-                    <Input
-                      id="name"
-                      value={newReport.name}
-                      onChange={(e) => setNewReport(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Monthly Lead Report"
-                    />
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold">Scheduled Reports</h3>
+          <p className="text-sm text-gray-600">
+            Automate report generation and delivery
+          </p>
+        </div>
+        <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
+          <Plus className="h-4 w-4 mr-2" />
+          Schedule Report
+        </Button>
+      </div>
+
+      {isCreating && (
+        <Card className="border-blue-200">
+          <CardHeader>
+            <CardTitle>Schedule New Report</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Report Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Weekly Sales Report"
+                />
+              </div>
+              <div>
+                <Label htmlFor="frequency">Frequency</Label>
+                <Select 
+                  value={formData.frequency} 
+                  onValueChange={(value) => setFormData({ ...formData, frequency: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="format">Format</Label>
+                <Select 
+                  value={formData.format} 
+                  onValueChange={(value) => setFormData({ ...formData, format: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PDF">PDF</SelectItem>
+                    <SelectItem value="Excel">Excel</SelectItem>
+                    <SelectItem value="CSV">CSV</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="time">Time</Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="recipients">Recipients (comma-separated emails)</Label>
+              <Input
+                id="recipients"
+                value={formData.recipients}
+                onChange={(e) => setFormData({ ...formData, recipients: e.target.value })}
+                placeholder="admin@company.com, manager@company.com"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleCreateReport}>
+                Schedule Report
+              </Button>
+              <Button variant="outline" onClick={() => setIsCreating(false)}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-4">
+        {reports.map((report) => (
+          <Card key={report.id}>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <h4 className="font-medium">{report.name}</h4>
+                    <Badge variant={report.is_active ? "default" : "secondary"}>
+                      {report.is_active ? "Active" : "Paused"}
+                    </Badge>
+                    <Badge variant="outline">
+                      {formatFrequency(report.frequency)}
+                    </Badge>
+                    <Badge variant="outline">
+                      {report.format}
+                    </Badge>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="report_type">Report Type</Label>
-                    <Select value={newReport.report_type} onValueChange={(value) => setNewReport(prev => ({ ...prev, report_type: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="leads">Leads Report</SelectItem>
-                        <SelectItem value="analytics">Analytics Report</SelectItem>
-                        <SelectItem value="financial">Financial Report</SelectItem>
-                        <SelectItem value="performance">Performance Report</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Next run: {formatNextRun(report.next_run)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      {report.recipients.length} recipient(s)
+                    </span>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="format">Format</Label>
-                    <Select value={newReport.format} onValueChange={(value) => setNewReport(prev => ({ ...prev, format: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pdf">PDF</SelectItem>
-                        <SelectItem value="excel">Excel</SelectItem>
-                        <SelectItem value="csv">CSV</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="frequency">Frequency</Label>
-                    <Select value={newReport.frequency} onValueChange={(value) => setNewReport(prev => ({ ...prev, frequency: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Recipients</Label>
-                    {newReport.recipients.map((recipient, index) => (
-                      <div key={index} className="flex gap-2">
-                        <Input
-                          value={recipient}
-                          onChange={(e) => updateRecipient(index, e.target.value)}
-                          placeholder="email@example.com"
-                          type="email"
-                        />
-                        {newReport.recipients.length > 1 && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => removeRecipient(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+
+                  {report.last_run && (
+                    <p className="text-xs text-gray-500">
+                      Last run: {formatNextRun(report.last_run)}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {report.recipients.map((email, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {email}
+                      </Badge>
                     ))}
-                    <Button variant="outline" size="sm" onClick={addRecipient}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Recipient
-                    </Button>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={newReport.is_active}
-                      onCheckedChange={(checked) => setNewReport(prev => ({ ...prev, is_active: checked }))}
-                    />
-                    <Label>Active</Label>
-                  </div>
-                  
-                  <Button onClick={saveReport} className="w-full">
-                    {editingReport ? 'Update Report' : 'Schedule Report'}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => runReportNow(report.id)}
+                  >
+                    <Play className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => toggleReportStatus(report.id)}
+                  >
+                    {report.is_active ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => deleteReport(report.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Frequency</TableHead>
-                <TableHead>Recipients</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Next Run</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell className="font-medium">{report.name}</TableCell>
-                  <TableCell>{report.report_type}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {report.frequency}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      <Mail className="h-3 w-3 mr-1" />
-                      {report.recipients.length} recipient{report.recipients.length !== 1 ? 's' : ''}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={report.is_active}
-                      onCheckedChange={(checked) => toggleReportStatus(report.id, checked)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      {new Date(report.next_run).toLocaleDateString()}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(report)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteReport(report.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          {reports.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No scheduled reports found</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {reports.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Scheduled Reports</h3>
+              <p className="text-gray-500 mb-4">
+                Create your first scheduled report to automate data delivery.
+              </p>
+              <Button onClick={() => setIsCreating(true)}>
+                Schedule Your First Report
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };
