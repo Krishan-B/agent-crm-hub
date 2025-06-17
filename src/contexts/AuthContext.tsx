@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,17 +86,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // Check rate limiting for login attempts
-      const canAttemptLogin = await supabase.rpc('check_rate_limit', {
+      // Check rate limiting for login attempts first
+      const { data: canAttemptLogin, error: rateLimitError } = await supabase.rpc('check_rate_limit', {
         p_identifier: email,
         p_action: 'login',
         p_limit: 5,
         p_window_minutes: 15
       });
 
-      if (!canAttemptLogin.data) {
+      if (rateLimitError) {
+        console.error('Rate limit check error:', rateLimitError);
         setIsLoading(false);
-        return { error: 'Too many login attempts. Please try again later.' };
+        return { error: 'Unable to process login request. Please try again.' };
+      }
+
+      if (!canAttemptLogin) {
+        setIsLoading(false);
+        return { error: 'Too many login attempts. Please try again in 15 minutes.' };
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -120,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Session will be handled by the onAuthStateChange listener
       return {};
     } catch (error) {
+      console.error('Login error:', error);
       setIsLoading(false);
       return { error: 'An unexpected error occurred' };
     }
