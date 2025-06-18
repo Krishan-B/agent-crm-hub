@@ -210,9 +210,7 @@ const updateUser = async (req, res) => {
              return res.status(403).json({ message: `Forbidden: You cannot update '${key}' for your profile.`});
         }
       }
-      if (updates.email && updates.email !== userToUpdate.email) {
-        return res.status(403).json({ message: 'Forbidden: You cannot change your email address directly. Please contact an administrator.' });
-      }
+// Removed redundant check for email updates in the agent branch.
       if (updates.role || updates.status || updates.department ) {
          return res.status(403).json({ message: 'Forbidden: You cannot change your role, status, or department.' });
       }
