@@ -143,7 +143,7 @@ const getUserById = async (req, res) => {
     if (error) {
       console.error(`Error fetching user ${requestedUserId}:`, error.message);
       // Differentiate between "not found" and other errors
-      if (error.code === 'PGRST116') { // PostgREST code for " esattamente una riga (zero righe restituite)" -> zero rows returned
+      if (error.code === POSTGREST_ERROR_CODE_NO_ROWS) { // PostgREST code for "zero rows returned"
         return res.status(404).json({ message: 'User not found.' });
       }
       return res.status(500).json({ message: 'Failed to fetch user.' });
