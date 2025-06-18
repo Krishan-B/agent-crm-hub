@@ -17,9 +17,12 @@ app.get('/', (req, res) => {
 // Placeholder for future routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
-const leadRoutes = require('./routes/leadRoutes'); // Add this line
+const leadRoutes = require('./routes/leadRoutes');
+const kycRoutes = require('./routes/kycRoutes'); // Add this line
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/leads', leadRoutes); // Add this line
+app.use('/api/leads', leadRoutes); // Handles /api/leads/:leadId/kyc/...
+app.use('/api/kyc', kycRoutes);   // Handles /api/kyc/documents/:documentId
 
 module.exports = app;
