@@ -8,9 +8,14 @@ const {
 const {
     uploadKycDocument,
     kycUploadMiddleware,
-    getKycStatusAndDocuments // Import this
+    getKycStatusAndDocuments
 } = require('../controllers/kycController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const {
+    getCurrentBalance,
+    addBalanceOrBonus,
+    getTransactionHistory // Add getTransactionHistory
+} = require('../controllers/balanceController');
+const { protect } = require('../middleware/authMiddleware');
 
 // Lead main routes
 router.post('/', protect, createLead);
@@ -24,11 +29,27 @@ router.post(
     kycUploadMiddleware,
     uploadKycDocument
 );
-
 router.get(
     '/:leadId/kyc',
     protect,
-    getKycStatusAndDocuments // Add this route
+    getKycStatusAndDocuments
+);
+
+// Balance routes nested under a specific lead
+router.get(
+    '/:leadId/balance',
+    protect,
+    getCurrentBalance
+);
+router.post(
+    '/:leadId/balance',
+    protect,
+    addBalanceOrBonus
+);
+router.get( // Add this route for getting transaction history
+    '/:leadId/transactions',
+    protect,
+    getTransactionHistory
 );
 
 module.exports = router;
