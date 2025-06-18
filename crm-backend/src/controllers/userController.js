@@ -101,12 +101,9 @@ const createUser = async (req, res) => {
 // @access  Private/Admin
 const getUsers = async (req, res) => {
   try {
-    // Admins can get all users. RLS policies on 'users' table should allow this for admin role.
-    // If RLS restricts admin, supabaseAdmin client would be needed here.
-    // For now, assuming RLS is set up for admin to read all from 'users' table.
     const { data: users, error } = await supabase
       .from('users')
-      .select('*'); // Select all columns
+      .select('*');
 
     if (error) {
       console.error('Error fetching users:', error.message);
@@ -125,31 +122,28 @@ const getUsers = async (req, res) => {
 // @access  Private (Admin can get any, Agent can get their own)
 const getUserById = async (req, res) => {
   const requestedUserId = req.params.id;
-  const authenticatedUser = req.user; // From protect middleware
+  const authenticatedUser = req.user;
 
   try {
-    // Admin can access any user's details
-    // Agent can only access their own details
     if (authenticatedUser.role !== 'admin' && authenticatedUser.id !== requestedUserId) {
       return res.status(403).json({ message: 'Forbidden: You can only access your own profile.' });
     }
 
     const { data: user, error } = await supabase
       .from('users')
-      .select('*') // Select all columns
+      .select('*')
       .eq('id', requestedUserId)
       .single();
 
     if (error) {
       console.error(`Error fetching user ${requestedUserId}:`, error.message);
-      // Differentiate between "not found" and other errors
-      if (error.code === POSTGREST_ERROR_CODE_NO_ROWS) { // PostgREST code for "zero rows returned"
+      if (error.code === 'PGRST116') {
         return res.status(404).json({ message: 'User not found.' });
       }
       return res.status(500).json({ message: 'Failed to fetch user.' });
     }
 
-    if (!user) { // Should be caught by error.code PGRST116 with .single()
+    if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
@@ -160,9 +154,204 @@ const getUserById = async (req, res) => {
   }
 };
 
+// @desc    Update user details
+// @route   PUT /api/users/:id
+// @access  Private (Admin can update any, Agent can update their own with restrictions)
+const updateUser = async (req, res) => {
+  const requestedUserId = req.params.id;
+  const authenticatedUser = req.user;
+  const updates = req.body;
+
+  const agentAllowedUpdates = ['firstName', 'lastName', 'phone'];
+  const adminAllowedUpdates = ['firstName', 'lastName', 'phone', 'department', 'status', 'role', 'email'];
+
+  let userToUpdate;
+
+  try {
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', requestedUserId)
+      .single();
+
+    if (fetchError || !existingUser) {
+      return res.status(404).json({ message: 'User not found to update.' });
+    }
+    userToUpdate = existingUser;
+
+    const userDataToUpdate = {};
+
+    if (authenticatedUser.role === 'admin') {
+      for (const key of Object.keys(updates)) {
+        if (adminAllowedUpdates.includes(key)) {
+          if (key === 'email' && updates.email !== userToUpdate.email) {
+            if (!supabaseAdmin) return res.status(500).json({ message: 'Admin client not available for auth update.'});
+            const { data: authUpdateData, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+              requestedUserId,
+              { email: updates.email, email_confirm: true }
+            );
+            if (authError) {
+              return res.status(400).json({ message: `Failed to update email in Auth: ${authError.message}` });
+            }
+            userDataToUpdate.email = authUpdateData.user.email;
+          } else if (key === 'role' && updates.role !== userToUpdate.role) {
+            userDataToUpdate.role = updates.role;
+          }
+          else if (key !== 'email') {
+            userDataToUpdate[key] = updates[key];
+          }
+        }
+      }
+    } else if (authenticatedUser.id === requestedUserId) {
+      for (const key of Object.keys(updates)) {
+        if (agentAllowedUpdates.includes(key)) {
+          userDataToUpdate[key] = updates[key];
+        } else if (adminAllowedUpdates.includes(key)) {
+             return res.status(403).json({ message: `Forbidden: You cannot update '${key}' for your profile.`});
+        }
+      }
+// Removed redundant check for email updates in the agent branch.
+      if (updates.role || updates.status || updates.department ) {
+         return res.status(403).json({ message: 'Forbidden: You cannot change your role, status, or department.' });
+      }
+    } else {
+      return res.status(403).json({ message: 'Forbidden: You are not authorized to update this user.' });
+    }
+
+    if (Object.keys(userDataToUpdate).length === 0) {
+        return res.status(400).json({ message: 'No valid fields provided for update or no changes detected.' });
+    }
+
+    if (Object.keys(userDataToUpdate).length > 0) {
+        const { data: updatedUser, error: dbUpdateError } = await supabase
+          .from('users')
+          .update(userDataToUpdate)
+          .eq('id', requestedUserId)
+          .select()
+          .single();
+
+        if (dbUpdateError) {
+          console.error(`Error updating user ${requestedUserId} in DB:`, dbUpdateError.message);
+          return res.status(500).json({ message: 'Failed to update user details in database.' });
+        }
+         res.status(200).json(updatedUser);
+    } else {
+        res.status(200).json(userToUpdate);
+    }
+
+  } catch (error) {
+    console.error(`Server error updating user ${requestedUserId}:`, error);
+    res.status(500).json({ message: 'Server error updating user.' });
+  }
+};
+
+// @desc    Delete a user
+// @route   DELETE /api/users/:id
+// @access  Private/Admin
+const deleteUser = async (req, res) => {
+  const userIdToDelete = req.params.id;
+  const adminMakingRequest = req.user;
+
+  if (!supabaseAdmin) {
+    return res.status(500).json({ message: 'Admin client not configured. Cannot delete user.' });
+  }
+
+  if (userIdToDelete === adminMakingRequest.id) {
+    return res.status(400).json({ message: 'Admins cannot delete their own account via this endpoint.' });
+  }
+
+  try {
+    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userIdToDelete);
+
+    if (authDeleteError) {
+      if (authDeleteError.message && authDeleteError.message.toLowerCase().includes('not found')) {
+         console.warn(`User ${userIdToDelete} not found in Supabase Auth. Proceeding to check local DB.`);
+      } else {
+        console.error(`Error deleting user ${userIdToDelete} from Supabase Auth:`, authDeleteError.message);
+        return res.status(500).json({ message: `Failed to delete user from authentication system: ${authDeleteError.message}` });
+      }
+    }
+
+    const { error: dbDeleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userIdToDelete);
+
+    if (dbDeleteError) {
+      console.error(`Error deleting user ${userIdToDelete} from database:`, dbDeleteError.message);
+      return res.status(500).json({ message: `User deleted from Auth (if existed), but failed to delete from database: ${dbDeleteError.message}` });
+    }
+
+    res.status(200).json({ message: 'User deleted successfully from Auth and database.' });
+
+  } catch (error) {
+    console.error(`Server error deleting user ${userIdToDelete}:`, error);
+    res.status(500).json({ message: 'Server error deleting user.' });
+  }
+};
+
+// @desc    Get login sessions for a specific user
+// @route   GET /api/users/:id/sessions
+// @access  Private/Admin
+const getUserLoginSessions = async (req, res) => {
+  const userId = req.params.id;
+  // Admin authorization is handled by the route middleware authorize('admin')
+
+  // Pagination parameters
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const offset = (page - 1) * limit;
+
+  try {
+    // First, check if the user exists to provide a better error message
+    const { data: userExists, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle(); // Use maybeSingle to not error if user not found
+
+    if (userError) {
+        console.error(`Error checking user existence for sessions ${userId}:`, userError.message);
+        return res.status(500).json({ message: 'Error verifying user before fetching sessions.' });
+    }
+    if (!userExists) {
+        return res.status(404).json({ message: 'User not found. Cannot fetch login sessions.' });
+    }
+
+    // Fetch login sessions for the user with pagination
+    const { data: sessions, error: sessionsError, count } = await supabase
+      .from('login_sessions')
+      .select('*', { count: 'exact' }) // Fetch all columns and total count
+      .eq('user_id', userId)
+      .order('login_time', { ascending: false }) // Show most recent first
+      .range(offset, offset + limit - 1);
+
+    if (sessionsError) {
+      console.error(`Error fetching login sessions for user ${userId}:`, sessionsError.message);
+      return res.status(500).json({ message: 'Failed to fetch login sessions.' });
+    }
+
+    res.status(200).json({
+      sessions,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(count / limit),
+        totalSessions: count,
+        limit,
+      },
+    });
+
+  } catch (error) {
+    console.error(`Server error fetching login sessions for user ${userId}:`, error);
+    res.status(500).json({ message: 'Server error fetching login sessions.' });
+  }
+};
+
 module.exports = {
   createUser,
   getUsers,
   getUserById,
-  // Other user controller methods will go here (update, delete)
+  updateUser,
+  deleteUser,
+  getUserLoginSessions,
 };

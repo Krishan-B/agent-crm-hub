@@ -3,20 +3,21 @@ const router = express.Router();
 const {
     createUser,
     getUsers,
-    getUserById
+    getUserById,
+    updateUser,
+    deleteUser,
+    getUserLoginSessions // Add getUserLoginSessions here
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// POST /api/users - Create a new user (Admin only)
 router.post('/', protect, authorize('admin'), createUser);
-
-// GET /api/users - Get all users (Admin only)
 router.get('/', protect, authorize('admin'), getUsers);
 
-// GET /api/users/:id - Get user by ID (Admin can get any, Agent their own)
-// Note: The authorize middleware here is more complex due to self-access.
-// The controller handles the specific logic for self-access vs admin access.
-// So, we just need 'protect' to ensure user is authenticated.
-router.get('/:id', protect, getUserById);
+// User specific sessions route - place before /:id to avoid 'sessions' being treated as an ID
+router.get('/:id/sessions', protect, authorize('admin'), getUserLoginSessions); // Add this line
+
+router.get('/:id', protect, getUserById); // Auth logic in controller
+router.put('/:id', protect, updateUser);   // Auth logic in controller
+router.delete('/:id', protect, authorize('admin'), deleteUser);
 
 module.exports = router;
